@@ -57,9 +57,7 @@ class Player:
         self.characters = []
         self.current_character = None
         self.is_gamemaster = False
-        self.is_ignored = True
         self.is_playing = False
-        self.is_ready = False
         self.has_order = False
 
     def can_add_more_characters(self, room):
@@ -110,6 +108,7 @@ class Room:
 
     def __init__(self, gamemaster_id):
         self.players = []
+        self.unready_players = []
         self.__id_number = self.set_room_id()
         self.characters = []
         self.guessed_characters = []
@@ -184,13 +183,6 @@ class Room:
     def times_up(self):
         return int(time()) > self.__round_finishes
 
-    def check_players_are_ready(self):
-        for player in self.players:
-            player: Player
-            if player.is_ready is False:
-                return False
-        return True
-
     def reset_charracters(self):
         for character in self.guessed_characters:
             self.characters.append(character)
@@ -207,7 +199,7 @@ class Room:
             player.current_character = None
 
     def last_round(self):
-        return self.round >= 3
+        return self.round > 3
 
     def check_players_order(self, player: Player):
         return player.position == self.current_player_position
@@ -233,6 +225,8 @@ class Room:
 
     def close(self):
         self.open = False
+        for player in self.players:
+            self.unready_players.append(player)
 
     def set_players_position(self, player: Player):
         self.players[player.position] = player
@@ -246,7 +240,7 @@ class Room:
         return True
 
     def player_is_last(self, player: Player):
-        return player == self.players[-1]
+        return not self.unready_players
 
     def next_character(self):
         riddler: Player = self.players[self.current_player_position]

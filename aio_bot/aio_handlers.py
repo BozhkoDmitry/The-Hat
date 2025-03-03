@@ -35,13 +35,28 @@ async def end_round(room: Room, player: Player, times_up=False):
                 person.id_number,
                 text=person.Messages.ALL_CHARACTERS_GUESSED
             )
+            await send_message(
+                person.id_number,
+                text=f'Закончился раунд № {room.round}'
+            )
+            await send_message(
+                person.id_number,
+                text=(
+                    'Общее количество ваших очков: '
+                    f'{person.score}'
+                )
+            )
+        room.next_round()
+        if room.last_round():
+            await game_over(room=room)
+            return None
 
     await send_message(
         player.id_number,
         reply_markup=ReplyKeyboardRemove(),
         text=(
-            'Количество угаданных персонажей в этом '
-            f'раунде {player.round_score}'
+            'Количество заработаных очков в этот раз: '
+            f'{player.round_score}'
         )
     )
 
@@ -49,8 +64,8 @@ async def end_round(room: Room, player: Player, times_up=False):
         await send_message(
             guesser.id_number,
             text=(
-                'Количество угаданных персонажей в этом '
-                f'раунде {guesser.round_score}'
+                'Количество заработаных очков в этот раз: '
+                f'{player.round_score}'
             )
         )
 
@@ -60,7 +75,6 @@ async def end_round(room: Room, player: Player, times_up=False):
         text=guesser.Messages.YOUR_MOVE
     )
     room.end_round(player)
-    room.next_round()
 
 
 async def game_over(room: Room):
@@ -69,13 +83,6 @@ async def game_over(room: Room):
         await send_message(
             player.id_number,
             text=player.Messages.GAME_OVER
-        )
-        await send_message(
-            player.id_number,
-            text=(
-                'Количество ваших очков: '
-                f'{player.score}'
-            )
         )
         await send_message(
             player.id_number,
@@ -377,6 +384,13 @@ async def start_adding_characters(message: Message, state: FSMContext):
         )
         return None
 
+    if room.open:
+        await message.answer(
+            text=(
+                'Добавлять персонажей можно будет когда комната закроется'
+            )
+        )
+
     if not player.characters:
         await message.answer(
             reply_markup=ReplyKeyboardRemove(),
@@ -571,9 +585,9 @@ async def play(message: Message, state: FSMContext):
             text=player.Messages.PLAYER_NOT_ORDERED,
             reply_markup=kb.set_position_keyboard
         )
+        return None
 
-    player.is_ignored = True
-    player.is_ready = True
+    room.unready_players.remove(player)
 
     if not room.player_is_last(player):
         await message.answer(
@@ -622,12 +636,6 @@ async def start_round(message: Message, state: FSMContext):
             await state.set_state(Reg.room_id)
             return None
 
-    if not room.check_players_are_ready():
-        await message.answer(
-            text=player.Messages.WAIT_FOR_OTHER_PLAYERS
-        )
-        return None
-
     if not room.check_players_order(player):
         await message.answer(
             text=player.Messages.WAIT_FOR_YOUR_TURN
@@ -643,9 +651,6 @@ async def start_round(message: Message, state: FSMContext):
             break
 
         if not room.characters:
-            if room.last_round():
-                await game_over(room=room)
-                break
             room.reset_charracters()
             await end_round(player=player, room=room)
             break
@@ -658,7 +663,7 @@ async def start_round(message: Message, state: FSMContext):
                 text=f'Объясните персонажа {character}'
             )
 
-        await asyncio.sleep(0.1)
+        await asyncio.sleep(0.2)
 
 
 @router.message(Command('next'))
