@@ -157,8 +157,6 @@ class Room:
                 character = choice(self.characters)
                 if character not in self.guessed_characters:
                     break
-                else:
-                    continue
             else:
                 return Player.Messages.ALL_CHARACTERS_GUESSED
         return character
@@ -223,10 +221,13 @@ class Room:
         guesser.is_playing = False
         player.is_playing = False
 
-    def close(self):
-        self.open = False
+    def new_stage(self):
         for player in self.players:
             self.unready_players.append(player)
+
+    def close(self):
+        self.open = False
+        self.new_stage()
 
     def set_players_position(self, player: Player):
         self.players[player.position] = player
@@ -239,7 +240,7 @@ class Room:
                 return False
         return True
 
-    def player_is_last(self, player: Player):
+    def player_is_last(self):
         return not self.unready_players
 
     def next_character(self):

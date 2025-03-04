@@ -127,13 +127,40 @@ async def create_player(message: Message):
 async def remove_player(message: Message):
     player: Player = await get_player_by(message)
     room: Room = await get_room_by(message)
-    if room and player:
-        room.players.remove(player)
+    if player:
+        if player.is_playing:
+            await message.answer(
+                text=player.Messages.FINISH_ROUND
+            )
+            return None
+        if room:
+            if player.is_gamemaster:
+                if not room.number_of_characters:
+                    await message.answer(
+                        text=(
+                            'Вы не можете покинуть комнату пока не установите '
+                            'количество загадываемых персонажей'
+                        )
+                    )
+                    return None
+
+                if room.open:
+                    await message.answer(
+                        text=(
+                            'Вы не можете покинуть комнату пока не '
+                            'закроете её '
+                        )
+                    )
+                    return None
+            room.players.remove(player)
+
+        await message.answer(
+            reply_markup=kb.start_keyboard,
+            text=player.Messages.GAME_EXITED
+        )
         del player.PLAYERS[player.id_number]
         del player
-    elif player:
-        del player.PLAYERS[player.id_number]
-        del player
+        return None
 
 
 async def create_room(gamemaster: Player):
@@ -191,6 +218,10 @@ async def add_name(message: Message, state: FSMContext):
         await state.set_state(Reg.name)
         return None
 
+    if message.text == '/exit':
+        await remove_player(message)
+        return None
+
     player.name = message.text
 
     if player.is_gamemaster:
@@ -213,10 +244,6 @@ async def add_room_id(message: Message, state: FSMContext):
     result = player.check_room_id(message)
 
     if message.text == '/exit':
-        await message.answer(
-            reply_markup=kb.start_keyboard,
-            text=player.Messages.GAME_EXITED
-        )
         await remove_player(message)
         return None
 
@@ -283,10 +310,6 @@ async def add_number_of_charaters(message: Message, state: FSMContext):
     result = player.check_number_of_characters(message)
 
     if message.text == '/exit':
-        await message.answer(
-            reply_markup=kb.start_keyboard,
-            text=player.Messages.GAME_EXITED
-        )
         await remove_player(message)
         return None
 
@@ -313,19 +336,18 @@ async def close_room(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if not player.is_gamemaster:
         await message.answer(
@@ -343,7 +365,6 @@ async def close_room(message: Message, state: FSMContext):
 
     room.close()
     for player in room.players:
-        player.is_ignored = False
         await send_message(
             chat_id=player.id_number,
             text=player.Messages.ADD_CHARACTERS,
@@ -364,19 +385,18 @@ async def start_adding_characters(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if room.characters_united:
         await message.answer(
@@ -413,18 +433,16 @@ async def add_character(message: Message, state: FSMContext):
         return None
 
     if message.text == '/exit':
-        await message.answer(
-            reply_markup=kb.start_keyboard,
-            text=player.Messages.GAME_EXITED
-        )
         await remove_player(message)
         return None
 
     character = message.text
     if not player.can_add_more_characters(await get_room_by(message)):
+        room: Room = await get_room_by(message)
         player.characters.append(character)
+        room.unready_players.remove(player)
         await message.answer(
-            markup=ReplyKeyboardRemove(),
+            reply_markup=ReplyKeyboardRemove(),
             text=(
                 'Вы добавили всех персонажей: '
                 f"{', '.join(player.characters)}"
@@ -432,10 +450,14 @@ async def add_character(message: Message, state: FSMContext):
         )
         if player.is_gamemaster:
             await message.answer(
-                reply_markup=kb.join_characters_keyboard,
                 text=player.Messages.JOIN_CHARACTERS
             )
-        player.is_ignored = True
+        if room.player_is_last():
+            await send_message(
+                room.gamemaster,
+                text='',
+                reply_markup=kb.join_characters_keyboard,
+            )
         return None
 
     player.characters.append(character)
@@ -454,19 +476,18 @@ async def join_characters(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if not player.is_gamemaster:
         await message.answer(
@@ -482,6 +503,7 @@ async def join_characters(message: Message, state: FSMContext):
         return None
 
     room.characters_united = True
+    room.new_stage()
     position = 1
     for player in room.players:
         room.characters.extend(player.characters)
@@ -538,10 +560,6 @@ async def add_position(message: Message, state: FSMContext):
     result = room.check_position(message)
 
     if message.text == '/exit':
-        await message.answer(
-            reply_markup=kb.start_keyboard,
-            text=player.Messages.GAME_EXITED
-        )
         await remove_player(message)
         return None
 
@@ -558,6 +576,12 @@ async def add_position(message: Message, state: FSMContext):
         text=result,
         reply_markup=ReplyKeyboardRemove()
     )
+    await message.answer(
+        text=(
+            'Доступные номера: '
+            f'{room.availible_positions}'
+        )
+    )
     await state.set_state(Reg.position)
 
 
@@ -566,19 +590,18 @@ async def play(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if not player.has_order:
         await message.answer(
@@ -589,7 +612,7 @@ async def play(message: Message, state: FSMContext):
 
     room.unready_players.remove(player)
 
-    if not room.player_is_last(player):
+    if not room.player_is_last():
         await message.answer(
             text=(
                 'Когда все игроки будут готовы вы получите сообщение с '
@@ -604,6 +627,7 @@ async def play(message: Message, state: FSMContext):
         previous_player: Player = room.get_previous_player(player)
         await send_message(
             player.id_number,
+            reply_markup=ReplyKeyboardRemove(),
             text=(
                 f'Вы загадываете слова игроку {next_player.name} '
                 f'и отгадывате слова игрока {previous_player.name}'
@@ -622,19 +646,18 @@ async def start_round(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if not room.check_players_order(player):
         await message.answer(
@@ -671,19 +694,18 @@ async def character_guessed(message: Message, state: FSMContext):
     room: Room = await get_room_by(message)
     player: Player = await get_player_by(message)
 
-    if not (room and player):
-        if not room:
-            if not player:
-                await message.answer(
-                    text=Player.Messages.PLAYER_NOT_REGISTERED,
-                    reply_markup=kb.start_keyboard
-                )
-                return None
+    if not room or not player:
+        if not player:
             await message.answer(
-                text=player.Messages.ROOM_NOT_ENTERED
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
             )
-            await state.set_state(Reg.room_id)
             return None
+        await message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
 
     if not room.check_players_order(player):
         await message.answer(
@@ -698,3 +720,8 @@ async def character_guessed(message: Message, state: FSMContext):
         )
 
     room.next_character()
+
+
+@router.message(Command('exit'))
+async def exit(message: Message):
+    await remove_player(message)
