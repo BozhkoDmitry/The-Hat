@@ -3,10 +3,10 @@ import os
 
 import aio_keybords as kb
 from aio_states import Reg
-from aiogram import Bot, Router
+from aiogram import Bot, Router, F
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
-from aiogram.types import Message, ReplyKeyboardRemove
+from aiogram.types import Message, ReplyKeyboardRemove, CallbackQuery
 from dotenv import load_dotenv
 from game_classes import Player, Room
 
@@ -455,7 +455,7 @@ async def add_character(message: Message, state: FSMContext):
         if room.player_is_last():
             await send_message(
                 room.gamemaster,
-                text='',
+                text='Все игроки ввели своих персонажей',
                 reply_markup=kb.join_characters_keyboard,
             )
         return None
@@ -682,7 +682,7 @@ async def start_round(message: Message, state: FSMContext):
             character = room.get_character()
             player.current_character = character
             await message.answer(
-                reply_markup=kb.next_keyboard,
+                reply_markup=kb.character_inline,
                 text=f'Объясните персонажа {character}'
             )
 
@@ -715,6 +715,40 @@ async def character_guessed(message: Message, state: FSMContext):
 
     if not player.is_playing:
         await message.answer(
+            text=player.Messages.START_ROUND,
+            reply_markup=kb.start_round_keyboard
+        )
+
+    room.next_character()
+
+
+@router.callback_query(F.data == 'next_character')
+async def next_character(callback: CallbackQuery, state: FSMContext):
+    await callback.answer('')
+    player: Player = await get_player_by(player_id=callback.message.chat.id)
+    room: Room = await get_room_by(room_id=player.room_id)
+
+    if not room or not player:
+        if not player:
+            await callback.message.answer(
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
+            )
+            return None
+        await callback.message.answer(
+            text=player.Messages.ROOM_NOT_ENTERED
+        )
+        await state.set_state(Reg.room_id)
+        return None
+
+    if not room.check_players_order(player):
+        await callback.message.answer(
+            text=player.Messages.WAIT_FOR_YOUR_TURN
+        )
+        return None
+
+    if not player.is_playing:
+        await callback.message.answer(
             text=player.Messages.START_ROUND,
             reply_markup=kb.start_round_keyboard
         )
