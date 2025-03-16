@@ -1,8 +1,7 @@
 import asyncio
 
-from aio_handlers import router
+from aio_handlers import bot, router
 from aiogram import Dispatcher
-from aio_handlers import bot
 
 dp = Dispatcher()
 

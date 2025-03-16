@@ -1,0 +1,93 @@
+2025-03-14 22:28:26,288 - aio_handlers - INFO - join_characters - 646 - player is alone
+2025-03-14 23:00:18,832 - aio_handlers - INFO - join_characters - 646 - availible positions created
+2025-03-14 23:00:18,833 - aio_handlers - INFO - join_characters - 651 - availible positions <bound method Room.add_player of <game_classes.Room object at 0x7e069297a410>>
+2025-03-14 23:00:18,833 - aio_handlers - INFO - join_characters - 657 - characters successfully shuffled
+2025-03-14 23:03:21,005 - aio_handlers - INFO - join_characters - 646 - availible positions created
+2025-03-14 23:03:21,005 - aio_handlers - INFO - join_characters - 650 - availible positions [1]
+2025-03-14 23:03:21,005 - aio_handlers - INFO - join_characters - 656 - characters successfully shuffled
+2025-03-14 23:25:06,932 - aio_handlers - INFO - join_characters - 649 - availible positions [1]
+2025-03-14 23:25:06,932 - aio_handlers - INFO - join_characters - 655 - characters successfully shuffled
+2025-03-14 23:27:02,750 - aio_handlers - INFO - join_characters - 649 - availible positions [1]
+2025-03-14 23:27:02,750 - aio_handlers - INFO - join_characters - 655 - characters successfully shuffled
+2025-03-15 00:00:35,294 - aio_handlers - INFO - join_characters - 661 - availible positions [1, 2]
+2025-03-15 00:00:35,294 - aio_handlers - INFO - join_characters - 667 - characters successfully shuffled
+2025-03-15 00:00:35,658 - aio_handlers - INFO - join_characters - 667 - characters successfully shuffled
+2025-03-15 00:00:54,653 - aio_handlers - DEBUG - remove_player_by - 98 - player left while choosing positions
+2025-03-15 00:01:11,543 - aio_handlers - INFO - play - 714 - some positions are not chosen
+2025-03-15 00:01:11,543 - aio_handlers - INFO - play - 734 - all positions are chosen and ready
+2025-03-15 00:10:05,173 - aio_handlers - INFO - join_characters - 666 - availible positions [1, 2]
+2025-03-15 00:10:05,174 - aio_handlers - INFO - join_characters - 672 - characters successfully shuffled
+2025-03-15 00:10:05,608 - aio_handlers - INFO - join_characters - 672 - characters successfully shuffled
+2025-03-15 00:10:18,178 - aio_handlers - DEBUG - remove_player_by - 98 - player left while choosing positions
+2025-03-15 00:10:22,991 - aio_handlers - INFO - play - 719 - some positions are not chosen
+2025-03-15 00:10:22,992 - aio_handlers - INFO - play - 721 - none of the players chose position
+2025-03-15 00:15:22,824 - aio_handlers - INFO - join_characters - 666 - availible positions [1, 2]
+2025-03-15 00:15:22,825 - aio_handlers - INFO - join_characters - 672 - characters successfully shuffled
+2025-03-15 00:15:23,333 - aio_handlers - INFO - join_characters - 672 - characters successfully shuffled
+2025-03-15 00:15:36,961 - aio_handlers - DEBUG - remove_player_by - 98 - player left while choosing positions
+2025-03-15 00:15:49,863 - aio_handlers - INFO - play - 719 - some positions are not chosen
+2025-03-15 00:15:49,863 - aio_handlers - INFO - play - 721 - none of the players chose position
+2025-03-15 00:15:58,461 - aio_handlers - INFO - play - 719 - some positions are not chosen
+2025-03-15 00:15:58,461 - aio_handlers - INFO - play - 743 - all positions are chosen and ready
+2025-03-15 00:29:04,282 - aio_handlers - INFO - join_characters - 682 - availible positions [1, 2]
+2025-03-15 00:29:04,282 - aio_handlers - INFO - join_characters - 688 - characters successfully shuffled
+2025-03-15 00:29:04,795 - aio_handlers - INFO - join_characters - 688 - characters successfully shuffled
+2025-03-15 00:30:15,554 - aio_handlers - DEBUG - remove_player_by - 122 - player left while choosing positions
+2025-03-15 00:30:18,932 - aio_handlers - INFO - play - 757 - all positions are chosen and ready
+2025-03-15 10:51:20,817 - aio_handlers - INFO - join_characters - 687 - availible positions [1, 2]
+2025-03-15 10:51:20,826 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 10:51:21,213 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 10:51:44,769 - aio_handlers - DEBUG - remove_player_by - 125 - player left while choosing positions
+2025-03-15 10:51:44,889 - aio_handlers - DEBUG - remove_player_by - 133 - player chose position and leff
+2025-03-15 10:51:44,889 - aio_handlers - DEBUG - remove_player_by - 136 - players position availible again 1
+2025-03-15 10:52:01,989 - aio_handlers - INFO - play - 740 - some positions are not chosen
+2025-03-15 10:52:01,989 - aio_handlers - INFO - play - 762 - all positions are chosen and ready
+2025-03-15 10:55:40,403 - aio_handlers - INFO - join_characters - 687 - availible positions [1, 2]
+2025-03-15 10:55:40,404 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 10:55:40,851 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 10:56:03,035 - aio_handlers - DEBUG - remove_player_by - 125 - player left while choosing positions
+2025-03-15 10:56:03,167 - aio_handlers - DEBUG - remove_player_by - 133 - player chose position and leff
+2025-03-15 10:56:03,168 - aio_handlers - DEBUG - remove_player_by - 136 - players position availible again 0
+2025-03-15 10:56:20,695 - aio_handlers - INFO - play - 740 - some positions are not chosen
+2025-03-15 10:56:20,696 - aio_handlers - INFO - play - 762 - all positions are chosen and ready
+2025-03-15 10:56:21,073 - aio_handlers - DEBUG - play - 771 - players position 1current player position 0
+2025-03-15 21:48:30,952 - aio_handlers - INFO - join_characters - 687 - availible positions [1, 2]
+2025-03-15 21:48:30,985 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 21:48:31,254 - aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+2025-03-15 21:48:47,339 - aio_handlers - INFO - play - 764 - all positions are chosen
+2025-03-15 21:48:47,584 - aio_handlers - DEBUG - play - 773 - players position 0 current player position 0
+2025-03-15 21:48:48,049 - aio_handlers - DEBUG - play - 773 - players position 1 current player position 0
+2025-03-16 12:41:59,494 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 12:41:59,626 - aio_handlers - DEBUG - remove_player_by - 120 - the last player left, room is destroyed
+2025-03-16 12:43:04,726 - aio_handlers - INFO - join_characters - 634 - availible positions [1]
+2025-03-16 12:43:04,727 - aio_handlers - INFO - join_characters - 640 - characters successfully shuffled
+2025-03-16 12:43:11,479 - aio_handlers - INFO - play - 689 - some positions are not chosen
+2025-03-16 12:43:11,479 - aio_handlers - INFO - play - 691 - none of the players chose position
+2025-03-16 12:43:24,387 - aio_handlers - INFO - play - 714 - all positions are chosen
+2025-03-16 12:44:28,566 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 12:44:28,705 - aio_handlers - DEBUG - remove_player_by - 120 - the last player left, room is destroyed
+2025-03-16 13:16:07,719 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 13:16:08,224 - aio_handlers - DEBUG - remove_player_by - 162 - player leaves before character shuffle
+2025-03-16 13:16:49,190 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 13:16:49,390 - aio_handlers - DEBUG - remove_player_by - 162 - player leaves before character shuffle
+2025-03-16 13:17:05,575 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 13:17:05,942 - aio_handlers - DEBUG - remove_player_by - 120 - the last player left, room is destroyed
+2025-03-16 13:19:48,588 - aio_handlers - DEBUG - remove_player_by - 113 - player leaves with no damage to the room
+2025-03-16 13:19:48,714 - aio_handlers - DEBUG - remove_player_by - 127 - gamemsater leaves the game
+2025-03-16 13:19:48,715 - aio_handlers - DEBUG - remove_player_by - 148 - gamemaster left without shuffling characters
+2025-03-16 13:19:48,838 - aio_handlers - DEBUG - remove_player_by - 162 - player leaves before character shuffle
+2025-03-16 13:25:11,454 - aio_handlers - INFO - join_characters - 681 - availible positions [1, 2]
+2025-03-16 13:25:11,455 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:25:11,775 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:25:26,816 - aio_handlers - INFO - play - 761 - all positions are chosen
+2025-03-16 13:27:12,492 - aio_handlers - INFO - join_characters - 681 - availible positions [1, 2]
+2025-03-16 13:27:12,492 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:27:12,763 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:27:38,912 - aio_handlers - INFO - play - 761 - all positions are chosen
+2025-03-16 13:32:41,505 - aio_handlers - INFO - join_characters - 681 - availible positions [1, 2]
+2025-03-16 13:32:41,506 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:32:41,837 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:34:20,730 - aio_handlers - INFO - join_characters - 681 - availible positions [1, 2]
+2025-03-16 13:34:20,730 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:34:21,037 - aio_handlers - INFO - join_characters - 687 - characters successfully shuffled
+2025-03-16 13:34:29,328 - aio_handlers - INFO - play - 761 - all positions are chosen

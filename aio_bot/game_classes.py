@@ -59,6 +59,9 @@ class Player:
         self.is_gamemaster = False
         self.is_playing = False
         self.has_order = False
+        self.guesser = None
+        self.riddler = None
+        self.is_chosen = False
 
     def can_add_more_characters(self, room):
         return self.next_character_number() < room.number_of_characters
@@ -90,8 +93,8 @@ class Player:
         except ValueError:
             return self.Messages.MESSAGE_NOT_INTEGER
 
-    def set_position(self, message: Message):
-        self.position = int(message.text)-1
+    def set_position(self, position):
+        self.position = position-1
         self.has_order = True
 
     def get_point(self):
@@ -118,11 +121,12 @@ class Room:
         self.number_of_characters = 0
         self.__round_finishes = None
         self.current_player_position = 0
-        self.round_duration = 10
+        self.round_duration = 60
         self.round = 1
         self.guesser = None
         self.characters_united = False
         self.order_set = False
+        self.players_ready = False
 
     @property
     def id_number(self):
@@ -190,6 +194,11 @@ class Room:
         position = player.position + 1
         self.availible_positions.remove(position)
 
+    def refresh_players_positions(self):
+        for i in range(len(self.players)):
+            player: Player = self.players[i]
+            player.position = i
+
     def refresh_characters(self, player: Player):
         if player.current_character:
             self.characters.remove(player.current_character)
@@ -212,14 +221,15 @@ class Room:
         guesser.is_playing = True
         self.set_timer()
 
-    def end_round(self, player: Player):
-        guesser: Player = self.get_next_player(player)
+    def end_round(self):
+        riddler: Player = self.players[self.current_player_position]
+        guesser: Player = self.get_next_player(riddler)
         self.current_player_position = guesser.position
-        player.current_character = None
-        player.round_score = 0
+        riddler.current_character = None
+        riddler.round_score = 0
         guesser.round_score = 0
         guesser.is_playing = False
-        player.is_playing = False
+        riddler.is_playing = False
 
     def new_stage(self):
         for player in self.players:
@@ -231,7 +241,10 @@ class Room:
 
     def set_players_position(self, player: Player):
         self.players[player.position] = player
-        self.refresh_availible_positions(player)
+
+    def set_availible_positions(self):
+        for i in range(1, len(self.players)+1):
+            self.availible_positions.append(i)
 
     def players_have_order(self):
         for player in self.players:
