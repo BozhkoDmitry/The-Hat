@@ -95,7 +95,11 @@ async def remove_player_by(
         room: Room = await get_room_by(room_id=outcast.room_id)
 
     if not outcast:
-        return None
+        await send_message(
+            text='Вы ещё не зарегестрировались в игре',
+            reply_markup=kb.start_keyboard
+        )
+        return
 
     if outcast.is_playing:
         logger.info('player can not leave when playing')
@@ -103,134 +107,146 @@ async def remove_player_by(
             outcast.id_number,
             text=outcast.Messages.FINISH_ROUND
         )
-        return None
+        return
 
-    if (
-        not room
-        or not room.characters_united
-        or len(room.players) == 1
-    ):
-        logger.debug('player leaves with no damage to the room')
-        await send_message(
-            outcast.id_number,
-            reply_markup=kb.start_keyboard,
-            text=outcast.Messages.GAME_EXITED
+    if outcast.is_gamemaster and room and len(room.players) > 1:
+        logger.debug('gamemaster is leaving non-empty room')
+        for player in room.players:
+            if player != outcast:
+                new_gamemaster: Player = player
+                logger.info('new gamemaster appointed')
+                break
+
+        room.gamemaster = new_gamemaster.id_number
+        new_gamemaster.is_gamemaster = True
+
+    kick_player = True
+    new_gamemaster_message = None
+    refresh_positions = False
+    people_left_in_open_room = False
+    not_all_people_chose_positions = False
+
+    if not room:
+        logger.debug('player leaves before entering the room')
+        kick_player = False
+
+    elif len(room.players) == 1:
+        logger.debug('the last player left, room is destroyed')
+        del room.ROOMS[room.id_number]
+        kick_player = False
+
+    elif room.open and outcast.is_gamemaster:
+        logger.debug('gamemaster leaves before closing the room')
+
+        new_gamemaster_message = (
+            'Вы теперь ведущий. Закройте комнату когда все '
+            'игроки присоединятся к ней'
         )
-        if room and len(room.players) == 1:
-            logger.debug('the last player left, room is destroyed')
-            del room.ROOMS[room.id_number]
-            del room
 
-        if await get_room_by(message=message):
-            room.players.remove(outcast)
-            if outcast.is_gamemaster:
-                logger.debug('gamemsater leaves the game')
-                new_gamemaster: Player = room.players[0]
-                room.gamemaster = new_gamemaster.id_number
-                if room.open:
-                    logger.debug('gamemaster leaves before closing the room')
+        people_left_in_open_room = True
 
-                    await send_message(
-                        new_gamemaster.id_number,
-                        text=(
-                            'Вы теперь ведущий. Закройте комнату когда все '
-                            'игроки присоединятся к ней'
-                        )
-                    )
-                    await send_message(
-                        new_gamemaster.id_number,
-                        text=(
-                            'Список игроков в комнате'
-                            f'{room.players}'
-                        )
-                    )
-                elif not room.characters_united:
-                    logger.debug(
-                        'gamemaster left without shuffling characters'
-                    )
-                    room.unready_players.remove(outcast)
-                    await send_message(
-                        new_gamemaster.id_number,
-                        text=(
-                            'Вы теперь ведущий. Когда все игроки и вы в том '
-                            'числе закончат добавлять персонажей нажмите на '
-                            'кнопку Смешать персонажей'
-                        ),
-                        reply_markup=kb.join_characters_keyboard
-                    )
+    elif not room.characters_united:
+        logger.debug('player leaves before shuffling characters')
 
-            logger.debug('player leaves before character shuffle')
-            if outcast in room.unready_players:
-                room.unready_players.remove(outcast)
-
-        del outcast.PLAYERS[outcast.id_number]
-        del outcast
-        return None
-
-    if not room.players_ready:
-        logger.debug('player left while choosing position')
-        await send_message(
-            outcast.id_number,
-            reply_markup=kb.start_keyboard,
-            text=outcast.Messages.GAME_EXITED
-        )
-        del outcast.PLAYERS[outcast.id_number]
-
-        if outcast.has_order:
-            logger.debug('player chose position and leff')
-            room.availible_positions.append(outcast.position)
-            logger.debug(
-                f'players position availible again {outcast.position}'
-            )
+        if outcast in room.unready_players:
+            logger.info('player leaves before adding their characters')
+            room.unready_players.remove(outcast)
 
         if outcast.is_gamemaster:
-            logger.debug('gamemaster left before other players were ready')
-            for player in room.players:
-                if player != outcast:
-                    new_gamemaster = player
-                    logger.debug('new gamemaster appointed')
-                    break
+            logger.debug('gamemaster left without shuffling characters')
+            new_gamemaster_message = (
+                'Вы теперь ведущий. Когда все игроки и вы в том '
+                'числе закончат добавлять персонажей нажмите на '
+                'кнопку "Смешать персонажей". Она появится, '
+                'когда все игроки введут своих персонажей. '
+                'Сейчас продолжайте вписывать своих персонажей, '
+                'если ещё не успели записать всех'
+            )
 
-            room.gamemaster = new_gamemaster.id_number
-            new_gamemaster.is_gamemaster = True
-            outcast.is_gamemaster = False
+    elif not room.players_ready:
+        logger.debug('player leaves while choosing position')
+        kick_player = False
 
+        if outcast.has_order:
+            logger.debug('gamemaster chose position and left')
+            room.availible_positions.append(outcast.position)
+            outcast.has_order = False
+
+        if outcast.is_gamemaster:
+            logger.debug('gamemaster leaves while choosing position')
+
+            new_gamemaster_message = (
+                'Вы теперь ведущий. Когда все игроки '
+                'выберут позиции нажмите кнопку Игроки готовы \n'
+                'Игроки не выбравшие позицию будут дисквалифицированы'
+            )
+            not_all_people_chose_positions = True
+
+    elif room.players_ready:
+        logger.info('player leaves during the game')
+        kick_player = True
+        refresh_positions = True
+        if outcast.position == room.current_player_position:
+            logger.info(f'{outcast.position} : {room.current_player_position}')
+            guesser: Player = room.get_next_player(outcast)
+            await send_message(
+                guesser.id_number,
+                text=(
+                    'Ваш напарник покинул игру в свой ход. '
+                    'Теперь ваша очередь ходить'
+                ),
+                reply_markup=kb.start_round_keyboard
+            )
+
+    outcast.is_gamemaster = False
+
+    await send_message(
+        outcast.id_number,
+        reply_markup=kb.start_keyboard,
+        text=outcast.Messages.GAME_EXITED
+    )
+    del outcast.PLAYERS[outcast.id_number]
+
+    if kick_player:
+        logger.info('player will be kicked form the room')
+        room.players.remove(outcast)
+        if refresh_positions:
+            logger.info('positions will be refreshed')
+            room.refresh_players_positions()
+
+    if new_gamemaster_message:
+        logger.info('informing new gamemaster')
+
+        await send_message(
+            new_gamemaster.id_number,
+            text=new_gamemaster_message
+        )
+
+        if people_left_in_open_room:
+            logger.info('informing about people in lobby')
+            open_room_names = [player.name for player in room.players]
             await send_message(
                 new_gamemaster.id_number,
                 text=(
-                    'Вы теперь ведущий. Когда все игроки '
-                    'выберут позиции нажмите кнопку Игроки готовы \n'
-                    'Игроки не выбравшие позицию будут дисквалифицированы'
+                    'Список игроков в комнате: \n'
+                    f"{', '.join(open_room_names)}"
                 ),
-                reply_markup=kb.play_keyboard
+                reply_markup=kb.close_room_keyboard
             )
-            ready_players = [
+
+        elif not_all_people_chose_positions:
+            logger.info('informing about people choosing position')
+            position_names = [
                 player.name for player in room.players if player.has_order
             ]
             await send_message(
                 new_gamemaster.id_number,
                 text=(
                     'Список игроков с позициями: \n'
-                    f'{ready_players}'
-                )
+                    f"{', '.join(position_names)}"
+                ),
+                reply_markup=kb.play_keyboard
             )
-        return None
-
-    if room.players_ready:
-        logger.debug('player leaves during the game')
-        room.players.remove(outcast)
-        room.refresh_players_positions()
-        for player in room.players:
-            player: Player
-            await send_message(
-                player.id_number,
-                text=(
-                    f'Игрок {outcast.name} покинул игру. '
-                    f'Ваша новая позиция{player.position+1}'
-                )
-            )
-        del outcast.PLAYERS[outcast.id_number]
-        del outcast
 
 
 async def create_room(gamemaster: Player):
@@ -242,8 +258,19 @@ async def create_room(gamemaster: Player):
     return room
 
 
-async def end_round(room: Room, player: Player, times_up=False):
+async def end_round(
+        room: Room,
+        player: Player,
+        times_up=False,
+        first_message=None
+):
     guesser: Player = room.get_next_player(player)
+
+    if first_message:
+        await bot.delete_message(
+            chat_id=first_message.chat.id,
+            message_id=first_message.message_id,
+        )
 
     if not times_up:
         for person in room.players:
@@ -268,14 +295,14 @@ async def end_round(room: Room, player: Player, times_up=False):
             await game_over(room=room)
             return None
 
-    await send_message(
-        player.id_number,
-        text='Время вышло'
-    )
+    if times_up:
+        await send_message(
+            player.id_number,
+            text='Время вышло'
+        )
 
     await send_message(
         player.id_number,
-        reply_markup=ReplyKeyboardRemove(),
         text=(
             'Количество заработаных очков в этот раз: '
             f'{player.round_score}'
@@ -283,6 +310,11 @@ async def end_round(room: Room, player: Player, times_up=False):
     )
 
     if player != guesser:
+        if times_up:
+            await send_message(
+                guesser.id_number,
+                text='Время вышло'
+            )
         await send_message(
             guesser.id_number,
             text=(
@@ -327,6 +359,10 @@ async def start(message: Message):
     room: Room = await get_room_by(message=message)
 
     if not (player and room):
+        await message.answer(
+            text='Добро пожаловать в игру "Шляпа"',
+            reply_markup=ReplyKeyboardRemove()
+        )
         await message.answer(
             text=Player.Messages.CREATE_OR_ENTER_ROOM,
             reply_markup=kb.new_keyboard_inline
@@ -758,7 +794,6 @@ async def play(message: Message, state: FSMContext):
                     logger.debug(f'{new_gamemaster.name}')
                     room.gamemaster = new_gamemaster.id_number
                     new_gamemaster.is_gamemaster = True
-                del player
 
         room.availible_positions.clear()
         room.refresh_players_positions()
@@ -784,7 +819,8 @@ async def play(message: Message, state: FSMContext):
                 f'{room.get_next_player(player).name} \n'
                 'Слова отгадываете слова игрока '
                 f'{room.get_previous_player(player).name}'
-            )
+            ),
+            reply_markup=ReplyKeyboardRemove()
         )
         if room.check_players_order(player):
             await send_message(
@@ -824,8 +860,13 @@ async def start_round(message: Message, state: FSMContext):
         )
         return None
 
+    await message.answer(
+        text='Раунд начался',
+        reply_markup=ReplyKeyboardRemove()
+    )
     room.start_round()
 
+    first_message = None
     while True:
 
         if not await get_player_by(message=message):
@@ -833,22 +874,32 @@ async def start_round(message: Message, state: FSMContext):
                 text='Вы принудительно завершили игру'
             )
 
-        if room.times_up():
-            await end_round(player=player, room=room, times_up=True)
-            break
-
-        if not room.characters:
-            room.reset_charracters()
-            await end_round(player=player, room=room)
+        if room.times_up() or not room.characters:
+            if not room.characters:
+                room.reset_characters()
+            await end_round(
+                player=player, room=room,
+                times_up=room.times_up(),
+                first_message=first_message
+            )
             break
 
         if not player.current_character:
             character = room.get_character()
             player.current_character = character
-            await message.answer(
-                reply_markup=kb.character_inline,
-                text=f'Объясните персонажа {character}'
-            )
+            if not first_message:
+                first_message = await bot.send_message(
+                    player.id_number,
+                    reply_markup=kb.character_inline,
+                    text=f'Объясните персонажа {character}'
+                )
+            else:
+                await bot.edit_message_text(
+                    chat_id=first_message.chat.id,
+                    message_id=first_message.message_id,
+                    reply_markup=kb.character_inline,
+                    text=f'Объясните персонажа {character}'
+                )
 
         await asyncio.sleep(0.2)
 

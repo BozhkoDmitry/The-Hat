@@ -185,7 +185,7 @@ class Room:
     def times_up(self):
         return int(time()) > self.__round_finishes
 
-    def reset_charracters(self):
+    def reset_characters(self):
         for character in self.guessed_characters:
             self.characters.append(character)
         self.guessed_characters.clear()

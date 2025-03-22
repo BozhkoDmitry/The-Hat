@@ -7,7 +7,7 @@ def get_logger(name):
     """Функция-фабрика логгеров."""
     formatter = logging.Formatter(
         (
-            '%(asctime)s - %(name)s - %(levelname)s - '
+            '%(name)s - %(levelname)s - '
             '%(funcName)s - %(lineno)d - %(message)s'
         )
     )
