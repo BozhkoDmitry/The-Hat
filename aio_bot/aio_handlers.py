@@ -28,71 +28,31 @@ async def send_message(chat_id, text, reply_markup=None):
     )
 
 
-async def get_id_by(callback: CallbackQuery = None, message: Message = None):
-    if callback:
-        return callback.message.chat.id
-    if message:
-        return message.from_user.id
+def get_player_id_by(callback: CallbackQuery = None, message: Message = None):
+    return callback.message.chat.id if callback else message.from_user.id if message else None
 
 
-async def get_player_by(
-        callback: CallbackQuery = None,
-        message: Message = None,
-        player_id: int = None
-):
-    if not player_id:
-        if callback:
-            player_id = await get_id_by(callback=callback)
-        if message:
-            player_id = await get_id_by(message=message)
-    return Player.PLAYERS.get(player_id)
+def get_player_by_id(player_id: int = None):
+    return Player.PLAYERS.get(player_id) if player_id else None
 
 
-async def get_room_by(
-        callback: CallbackQuery = None,
-        message: Message = None,
-        room_id: int = None
-):
-    if not room_id:
-        if callback:
-            player: Player = await get_player_by(callback=callback)
-            room_id = player.room_id if player else None
-        if message:
-            player: Player = await get_player_by(message=message)
-            room_id = player.room_id if player else None
-    return Room.ROOMS.get(room_id)
+def get_room_by(room_id: int = None):
+    return Room.ROOMS.get(room_id) if room_id else None
 
 
-async def create_player_with(
-        callback: CallbackQuery = None,
-        message: Message = None,
-        player_id: int = None
-):
-    if not player_id:
-        if callback:
-            player_id = await get_id_by(callback=callback)
-        if message:
-            player_id = await get_id_by(message=message)
-    if not await get_player_by(player_id=player_id):
+def create_player_with(callback: CallbackQuery = None, message: Message = None, player_id: int = None):
+    player_id = player_id or get_player_id_by(callback, message)
+
+    if not get_player_by_id(player_id=player_id):
         player = Player(player_id)
-        player.PLAYERS[player.id_number] = player
+        Player.PLAYERS[player.id_number] = player
         return player
 
 
-async def remove_player_by(
-        callback: CallbackQuery = None,
-        message: Message = None,
-        player_id: int = None,
-):
-    if message:
-        outcast: Player = await get_player_by(message=message)
-        room: Room = await get_room_by(message=message)
-    if callback:
-        outcast: Player = await get_player_by(callback=callback)
-        room: Room = await get_room_by(callback=callback)
-    if player_id:
-        outcast: Player = await get_player_by(player_id=player_id)
-        room: Room = await get_room_by(room_id=outcast.room_id)
+async def remove_player_by(callback: CallbackQuery = None, message: Message = None, player_id: int = None):
+    player_id = player_id or get_player_id_by(callback, message)
+    outcast: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=outcast.room_id) if outcast else None
 
     if not outcast:
         await send_message(
@@ -249,7 +209,7 @@ async def remove_player_by(
             )
 
 
-async def create_room(gamemaster: Player):
+def create_room(gamemaster: Player):
     room = Room(gamemaster.id_number)
     gamemaster.room_id = room.id_number
     gamemaster.is_gamemaster = True
@@ -355,8 +315,9 @@ async def game_over(room: Room):
 
 @router.message(CommandStart())
 async def start(message: Message):
-    player: Player = await get_player_by(message=message)
-    room: Room = await get_room_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not (player and room):
         await message.answer(
@@ -378,11 +339,12 @@ async def start(message: Message):
 @router.callback_query(F.data == 'new_room')
 async def new_room_callback(callback: CallbackQuery, state: FSMContext):
     await state.clear()
-    gamemaster: Player = await create_player_with(callback=callback)
+    gamemaster: Player = create_player_with(callback=callback)
     await callback.answer('')
     if gamemaster:
-        await create_room(gamemaster)
-        await callback.message.edit_text(
+        create_room(gamemaster)
+        await callback.message.delete()
+        await callback.message.answer(
             text='Вы вошли в игру'
         )
         await callback.message.answer(
@@ -399,7 +361,7 @@ async def new_room_callback(callback: CallbackQuery, state: FSMContext):
 
 @router.callback_query(F.data == 'enter_room')
 async def enter_room_callback(callback: CallbackQuery, state: FSMContext):
-    player: Player = await create_player_with(callback=callback)
+    player: Player = create_player_with(callback=callback)
     await callback.answer('')
     if player:
         await state.set_state(Reg.name)
@@ -420,7 +382,8 @@ async def enter_room_callback(callback: CallbackQuery, state: FSMContext):
 @router.message(Reg.name)
 async def add_name(message: Message, state: FSMContext):
     await state.clear()
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
 
     if not message.text:
         await message.answer(
@@ -452,7 +415,8 @@ async def add_name(message: Message, state: FSMContext):
 @router.message(Reg.room_id)
 async def add_room_id(message: Message, state: FSMContext):
     await state.clear()
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
     result = player.check_room_id(message)
 
     if message.text == '/exit':
@@ -498,8 +462,9 @@ async def add_room_id(message: Message, state: FSMContext):
 @router.message(Reg.number_of_characters)
 async def add_number_of_charaters(message: Message, state: FSMContext):
     await state.clear()
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
     result = player.check_number_of_characters(message)
 
     if message.text == '/exit':
@@ -526,8 +491,9 @@ async def add_number_of_charaters(message: Message, state: FSMContext):
 
 @router.message(F.text == 'Закрыть комнату 🚪')
 async def close_room(message: Message, state: FSMContext):
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -575,8 +541,9 @@ async def close_room(message: Message, state: FSMContext):
 
 @router.message(F.text == 'Добавить персонажей ➕')
 async def start_adding_characters(message: Message, state: FSMContext):
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -616,7 +583,9 @@ async def start_adding_characters(message: Message, state: FSMContext):
 @router.message(Reg.character)
 async def add_character(message: Message, state: FSMContext):
     await state.clear()
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not message.text:
         await message.answer(
@@ -640,7 +609,6 @@ async def add_character(message: Message, state: FSMContext):
         return None
 
     character = message.text
-    room: Room = await get_room_by(message=message)
     if not player.can_add_more_characters(room):
         player.characters.append(character)
         room.unready_players.remove(player)
@@ -676,8 +644,9 @@ async def add_character(message: Message, state: FSMContext):
 
 @router.message(F.text == 'Смешать персонажей 🔁')
 async def join_characters(message: Message, state: FSMContext):
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -748,8 +717,9 @@ async def join_characters(message: Message, state: FSMContext):
 
 @router.message(F.text == 'Игроки готовы')
 async def play(message: Message, state: FSMContext):
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -832,8 +802,9 @@ async def play(message: Message, state: FSMContext):
 
 @router.message(F.text == 'Начать раунд')
 async def start_round(message: Message, state: FSMContext):
-    room: Room = await get_room_by(message=message)
-    player: Player = await get_player_by(message=message)
+    player_id = get_player_id_by(message=message)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -869,10 +840,10 @@ async def start_round(message: Message, state: FSMContext):
     first_message = None
     while True:
 
-        if not await get_player_by(message=message):
-            await message.answer(
-                text='Вы принудительно завершили игру'
-            )
+        # if not await get_player_by(message=message):
+        #     await message.answer(
+        #         text='Вы принудительно завершили игру'
+        #     )
 
         if room.times_up() or not room.characters:
             if not room.characters:
@@ -907,8 +878,9 @@ async def start_round(message: Message, state: FSMContext):
 @router.callback_query(F.data == 'next_character')
 async def next_character(callback: CallbackQuery, state: FSMContext):
     await callback.answer('')
-    player: Player = await get_player_by(callback=callback)
-    room: Room = await get_room_by(callback=callback)
+    player_id = get_player_id_by(callback=callback)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:
@@ -946,8 +918,9 @@ async def exit(message: Message):
 @router.callback_query(F.data.startswith('position_'))
 async def choose_guesser(callback: CallbackQuery, state: FSMContext):
     position = int(callback.data.split('_')[-1])
-    room: Room = await get_room_by(callback=callback)
-    player: Player = await get_player_by(callback=callback)
+    player_id = get_player_id_by(callback=callback)
+    player: Player = get_player_by_id(player_id=player_id)
+    room: Room = get_room_by(room_id=player.room_id) if player else None
 
     if not room or not player:
         if not player:

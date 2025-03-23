@@ -4,71 +4,63 @@ from aiogram.types import (
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
 
-
-new_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text='/new_room')],
-        [KeyboardButton(text='/enter_room')]
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
-    input_field_placeholder='Choose button'
-)
+RESIZE = True
+ONE_TIME = False
 
 start_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='/start')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 add_characters_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Добавить персонажей ➕')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 join_characters_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Смешать персонажей 🔁')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 close_room_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Закрыть комнату 🚪')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 set_position_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Выбрать напарника')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 play_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Игроки готовы')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 start_round_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='Начать раунд')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 
@@ -76,8 +68,8 @@ exit_keyboard = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text='/exit')],
     ],
-    resize_keyboard=True,
-    one_time_keyboard=True,
+    resize_keyboard=RESIZE,
+    one_time_keyboard=ONE_TIME,
 )
 
 character_inline = InlineKeyboardMarkup(

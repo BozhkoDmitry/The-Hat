@@ -166,21 +166,15 @@ class Room:
         return character
 
     def get_next_player(self, player: Player):
-        try:
-            position = player.position+1
-            next_player = self.players[position]
-        except IndexError:
-            position = 0
-            next_player = self.players[0]
-        finally:
-            return next_player
+        position = player.position+1
+        return self.players[position % len(self.players)]
 
     def get_previous_player(self, player: Player):
         position = player.position-1
         return self.players[position]
 
     def set_timer(self):
-        self.__round_finishes = int(time())+self.round_duration
+        self.__round_finishes = float(time())+self.round_duration
 
     def times_up(self):
         return int(time()) > self.__round_finishes
