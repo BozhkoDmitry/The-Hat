@@ -157,6 +157,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
                 ),
                 reply_markup=kb.start_round_keyboard
             )
+            room.end_round()
 
     outcast.is_gamemaster = False
 
@@ -173,6 +174,10 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         if refresh_positions:
             logger.info('positions will be refreshed')
             room.refresh_players_positions()
+            for player in room.players:
+                logger.info(
+                    f'{player.position}{room.current_player_position}'
+                )
 
     if new_gamemaster_message:
         logger.info('informing new gamemaster')
@@ -365,7 +370,8 @@ async def enter_room_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer('')
     if player:
         await state.set_state(Reg.name)
-        await callback.message.edit_text(
+        await callback.message.delete()
+        await callback.message.answer(
             text='Вы вошли в игру'
         )
         await callback.message.answer(
@@ -425,7 +431,7 @@ async def add_room_id(message: Message, state: FSMContext):
 
     if result == player.Messages.OK:
         room_id = int(message.text)
-        room: Room = await get_room_by(room_id=room_id)
+        room: Room = get_room_by(room_id=room_id)
 
         if not room.open:
             await message.answer(
