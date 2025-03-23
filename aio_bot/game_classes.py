@@ -108,6 +108,7 @@ class Room:
     MAX_ROOM_NUMBER = 9999
     TAKEN_ROOM_NUMBERS = []
     ROOMS = {}
+    ROOM_LOCKS = {}
 
     def __init__(self, gamemaster_id):
         self.players = []

@@ -299,3 +299,16 @@ aio_handlers - INFO - remove_player_by - 172 - player will be kicked form the ro
 aio_handlers - INFO - remove_player_by - 175 - positions will be refreshed
 aio_handlers - INFO - remove_player_by - 178 - 00
 aio_handlers - DEBUG - remove_player_by - 94 - the last player left, room is destroyed
+aio_handlers - INFO - join_characters - 698 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - play - 778 - all positions are chosen
+aio_handlers - DEBUG - remove_player_by - 73 - gamemaster is leaving non-empty room
+aio_handlers - INFO - remove_player_by - 77 - new gamemaster appointed
+aio_handlers - INFO - remove_player_by - 146 - player leaves during the game
+aio_handlers - INFO - remove_player_by - 150 - 1 : 1
+aio_handlers - INFO - remove_player_by - 172 - player will be kicked form the room
+aio_handlers - INFO - remove_player_by - 175 - positions will be refreshed
+aio_handlers - INFO - remove_player_by - 178 - 00
+aio_handlers - DEBUG - remove_player_by - 94 - the last player left, room is destroyed
+aio_handlers - DEBUG - remove_player_by - 94 - the last player left, room is destroyed
