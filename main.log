@@ -312,3 +312,31 @@ aio_handlers - INFO - remove_player_by - 175 - positions will be refreshed
 aio_handlers - INFO - remove_player_by - 178 - 00
 aio_handlers - DEBUG - remove_player_by - 94 - the last player left, room is destroyed
 aio_handlers - DEBUG - remove_player_by - 94 - the last player left, room is destroyed
+aio_handlers - INFO - join_characters - 694 - availible positions [1]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - play - 773 - all positions are chosen
+aio_handlers - INFO - join_characters - 694 - availible positions [1]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - play - 773 - all positions are chosen
+aio_handlers - INFO - join_characters - 694 - availible positions [1]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - play - 773 - all positions are chosen
+aio_handlers - INFO - join_characters - 687 - availible positions [1]
+aio_handlers - INFO - join_characters - 693 - characters successfully shuffled
+aio_handlers - INFO - play - 766 - all positions are chosen
+aio_handlers - INFO - join_characters - 688 - availible positions [1]
+aio_handlers - INFO - join_characters - 694 - characters successfully shuffled
+aio_handlers - INFO - play - 767 - all positions are chosen
+aio_handlers - ERROR - next_character - 902 - double_tap
+aio_handlers - ERROR - next_character - 902 - double_tap
+aio_handlers - ERROR - next_character - 902 - double_tap
+aio_handlers - INFO - join_characters - 694 - availible positions [1]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - play - 773 - all positions are chosen
+aio_handlers - DEBUG - remove_player_by - 101 - the last player left, room is destroyed
+aio_handlers - INFO - join_characters - 694 - availible positions [1]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - play - 773 - all positions are chosen
+aio_handlers - INFO - join_characters - 706 - availible positions [1]
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - play - 785 - all positions are chosen

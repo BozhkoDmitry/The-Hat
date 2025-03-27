@@ -1,5 +1,6 @@
 import asyncio
 import os
+from aiogram.exceptions import TelegramBadRequest
 
 import aio_keybords as kb
 from aio_states import Reg
@@ -20,6 +21,12 @@ bot = Bot(token=TOKEN)
 router = Router()
 
 logger = get_logger(__name__)
+
+ADMINS = [413470404]
+
+
+def is_admin(message: Message):
+    return message.from_user.id in ADMINS
 
 
 async def send_message(chat_id, text, reply_markup=None):
@@ -55,7 +62,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     room: Room = get_room_by(room_id=outcast.room_id) if outcast else None
 
     if not outcast:
-        await send_message(
+        await message.answer(
             text='Вы ещё не зарегестрировались в игре',
             reply_markup=kb.start_keyboard
         )
@@ -227,15 +234,8 @@ async def end_round(
         room: Room,
         player: Player,
         times_up=False,
-        first_message=None
 ):
     guesser: Player = room.get_next_player(player)
-
-    if first_message:
-        await bot.delete_message(
-            chat_id=first_message.chat.id,
-            message_id=first_message.message_id,
-        )
 
     if not times_up:
         for person in room.players:
@@ -297,11 +297,23 @@ async def end_round(
 
 
 async def game_over(room: Room):
+
+    room.players.sort(key=lambda player: player.score, reverse=True)
+
+    message = ''
+
+    for player in room.players:
+        message += f'\n {player.name} : {player.score} \n'
+
     for player in room.players:
         player: Player
         await send_message(
             player.id_number,
             text=player.Messages.GAME_OVER
+        )
+        await send_message(
+            player.id_number,
+            text=message
         )
         await send_message(
             player.id_number,
@@ -838,10 +850,9 @@ async def start_round(message: Message, state: FSMContext):
     )
     room.start_round()
 
-    first_message = None
     while True:
 
-        if not await get_player_by_id(get_player_id_by(message=message)):
+        if not get_player_by_id(get_player_id_by(message=message)):
             await message.answer(
                 text='Вы принудительно завершили игру'
             )
@@ -852,62 +863,61 @@ async def start_round(message: Message, state: FSMContext):
             await end_round(
                 player=player, room=room,
                 times_up=room.times_up(),
-                first_message=first_message
             )
             break
 
         if not player.current_character:
             character = room.get_character()
             player.current_character = character
-            if not first_message:
-                first_message = await bot.send_message(
-                    player.id_number,
-                    reply_markup=kb.character_inline,
-                    text=f'Объясните персонажа {character}'
-                )
-            else:
-                await bot.edit_message_text(
-                    chat_id=first_message.chat.id,
-                    message_id=first_message.message_id,
-                    reply_markup=kb.character_inline,
-                    text=f'Объясните персонажа {character}'
-                )
+            await message.answer(
+                reply_markup=kb.character_inline,
+                text=f'Объясните персонажа {character}'
+            )
 
         await asyncio.sleep(0.2)
 
 
 @router.callback_query(F.data == 'next_character')
 async def next_character(callback: CallbackQuery, state: FSMContext):
-    await callback.answer('')
-    player_id = get_player_id_by(callback=callback)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    try:
+        await callback.answer('')
+        player_id = get_player_id_by(callback=callback)
+        player: Player = get_player_by_id(player_id=player_id)
+        room: Room = get_room_by(room_id=player.room_id) if player else None
 
-    if not player:
-        await callback.message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
-            reply_markup=kb.start_keyboard
+        if not player:
+            await callback.message.answer(
+                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                reply_markup=kb.start_keyboard
+            )
+            return
+
+        if not room:
+            await callback.message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+            await state.set_state(Reg.room_id)
+            return
+
+        if not room.check_players_order(player):
+            await callback.message.answer(
+                text=player.Messages.WAIT_FOR_YOUR_TURN
+            )
+            return None
+
+        if not player.is_playing:
+            await callback.message.answer(
+                text=player.Messages.START_ROUND,
+                reply_markup=kb.start_round_keyboard
+            )
+
+        await callback.message.edit_text(
+            text='Угаданный персонаж',
+            reply_markup=None
         )
-        return
 
-    if not room:
-        await callback.message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
-        await state.set_state(Reg.room_id)
-        return
+        room.next_character()
 
-    if not room.check_players_order(player):
-        await callback.message.answer(
-            text=player.Messages.WAIT_FOR_YOUR_TURN
-        )
-        return None
-
-    if not player.is_playing:
-        await callback.message.answer(
-            text=player.Messages.START_ROUND,
-            reply_markup=kb.start_round_keyboard
-        )
-
-    room.next_character()
+    except TelegramBadRequest:
+        logger.error('double_tap')
 
 
 @router.message(Command('exit'))
@@ -955,3 +965,19 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
         text=f'ваш номер в очереди {position}'
     )
     await callback.message.delete()
+
+
+@router.message(Command('show_stats'))
+async def show_stats(message: Message):
+
+    if not is_admin(message):
+        return
+
+    await message.answer(
+        text=(
+            f'Игроки: \n {[player.name for player in Player.PLAYERS]}'
+            f' \n Комнаты: \n {[room.id_number for room in Room.ROOMS ]}'
+            f'\n Занятые номера: \n {[number for number in Room.TAKEN_ROOM_NUMBERS ]}'
+            f'\n Locks: \n {[lock for lock in Room.ROOM_LOCKS ]}'
+        )
+    )
