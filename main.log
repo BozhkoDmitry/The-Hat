@@ -385,3 +385,6 @@ aio_handlers - DEBUG - remove_player_by - 101 - the last player left, room is de
 aio_handlers - INFO - join_characters - 707 - availible positions [1]
 aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
 aio_handlers - INFO - play - 786 - all positions are chosen
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - play - 786 - all positions are chosen

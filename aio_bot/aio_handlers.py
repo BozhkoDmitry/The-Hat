@@ -199,7 +199,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             await send_message(
                 new_gamemaster.id_number,
                 text=(
-                    'Список игроков в комнате: \n'
+                    'Список игроков в комнате:\n'
                     f"{', '.join(open_room_names)}"
                 ),
                 reply_markup=kb.close_room_keyboard
@@ -800,9 +800,9 @@ async def play(message: Message, state: FSMContext):
         await send_message(
             player.id_number,
             text=(
-                'Вы загадываете слова игроку '
-                f'{room.get_next_player(player).name} \n'
-                'Слова отгадываете слова игрока '
+                'Вы объясняете персонажей игроку '
+                f'{room.get_next_player(player).name}\n'
+                'Вам объясняет персонажей игрок '
                 f'{room.get_previous_player(player).name}'
             ),
             reply_markup=ReplyKeyboardRemove()
@@ -964,7 +964,7 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
         message = f'\n{player.name} на позиции {position}'
 
     await callback.message.answer(
-        text=f'ваш номер в очереди {position}'
+        text=f'Ваш номер в очереди {position}'
     )
     await callback.message.delete()
 
