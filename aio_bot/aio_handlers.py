@@ -303,7 +303,7 @@ async def game_over(room: Room):
     message = ''
 
     for player in room.players:
-        message += f'\n {player.name} : {player.score} \n'
+        message += f'\n{player.name} : {player.score}'
 
     for player in room.players:
         player: Player
@@ -360,7 +360,6 @@ async def new_room_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer('')
     if gamemaster:
         create_room(gamemaster)
-        await callback.message.delete()
         await callback.message.answer(
             text='Вы вошли в игру'
         )
@@ -368,6 +367,7 @@ async def new_room_callback(callback: CallbackQuery, state: FSMContext):
             text=gamemaster.Messages.ENTER_YOUR_NAME
         )
         await state.set_state(Reg.name)
+        await callback.message.delete()
         return None
 
     await callback.message.answer(
@@ -382,13 +382,13 @@ async def enter_room_callback(callback: CallbackQuery, state: FSMContext):
     await callback.answer('')
     if player:
         await state.set_state(Reg.name)
-        await callback.message.delete()
         await callback.message.answer(
             text='Вы вошли в игру'
         )
         await callback.message.answer(
             text=player.Messages.ENTER_YOUR_NAME
         )
+        await callback.message.delete()
         return None
 
     await callback.message.answer(
@@ -625,27 +625,28 @@ async def add_character(message: Message, state: FSMContext):
         return None
 
     character = message.text
-    if not player.can_add_more_characters(room):
-        player.characters.append(character)
-        room.unready_players.remove(player)
-        await message.answer(
-            reply_markup=ReplyKeyboardRemove(),
-            text=(
-                'Вы добавили всех персонажей: '
-                f"{', '.join(player.characters)}"
-            )
-        )
-        if player.is_gamemaster:
+    async with room.ROOM_LOCKS[room.id_number]:
+        if not player.can_add_more_characters(room):
+            player.characters.append(character)
+            room.unready_players.remove(player)
             await message.answer(
-                text=player.Messages.JOIN_CHARACTERS
+                reply_markup=ReplyKeyboardRemove(),
+                text=(
+                    'Вы добавили всех персонажей: '
+                    f"{', '.join(player.characters)}"
+                )
             )
-        if room.player_is_last():
-            await send_message(
-                room.gamemaster,
-                text='Все игроки ввели своих персонажей',
-                reply_markup=kb.join_characters_keyboard,
-            )
-        return None
+            if player.is_gamemaster:
+                await message.answer(
+                    text=player.Messages.JOIN_CHARACTERS
+                )
+            if room.player_is_last():
+                await send_message(
+                    room.gamemaster,
+                    text='Все игроки ввели своих персонажей',
+                    reply_markup=kb.join_characters_keyboard,
+                )
+            return None
 
     player.characters.append(character)
     await message.answer(
@@ -931,7 +932,6 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
     player_id = get_player_id_by(callback=callback)
     player: Player = get_player_by_id(player_id=player_id)
     room: Room = get_room_by(room_id=player.room_id) if player else None
-    await callback.answer('')
 
     if not player:
         await callback.message.answer(
@@ -951,6 +951,7 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
 
     async with room.ROOM_LOCKS[room.id_number]:  # Захватываем блокировку
         if position not in room.availible_positions:
+            logger.info('Выбрана недоступная позиция')
             await callback.answer('Эта позиция уже выбрана', show_alert=True)
             await callback.message.edit_reply_markup(
                 reply_markup=await kb.positions_inline(room.availible_positions)
@@ -960,11 +961,17 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
         player.set_position(position)
         room.availible_positions.remove(position)
         room.set_players_position(player)
+        message = f'\n{player.name} на позиции {position}'
 
     await callback.message.answer(
         text=f'ваш номер в очереди {position}'
     )
     await callback.message.delete()
+
+    await send_message(
+        room.gamemaster,
+        text=message,
+    )
 
 
 @router.message(Command('show_stats'))
@@ -975,9 +982,9 @@ async def show_stats(message: Message):
 
     await message.answer(
         text=(
-            f'Игроки: \n {[player.name for player in Player.PLAYERS]}'
-            f' \n Комнаты: \n {[room.id_number for room in Room.ROOMS ]}'
-            f'\n Занятые номера: \n {[number for number in Room.TAKEN_ROOM_NUMBERS ]}'
-            f'\n Locks: \n {[lock for lock in Room.ROOM_LOCKS ]}'
+            f'Игроки:\n{[player.name for id_nuber, player in Player.PLAYERS.items()]}'
+            f'\nКомнаты:\n{[room.id_number for id_number, room in Room.ROOMS.items()]}'
+            f'\nЗанятые номера:\n{[number for number in Room.TAKEN_ROOM_NUMBERS]}'
+            f'\nLocks:\n{[lock for lock in Room.ROOM_LOCKS ]}'
         )
     )

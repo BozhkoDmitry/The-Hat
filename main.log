@@ -340,3 +340,48 @@ aio_handlers - INFO - play - 773 - all positions are chosen
 aio_handlers - INFO - join_characters - 706 - availible positions [1]
 aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
 aio_handlers - INFO - play - 785 - all positions are chosen
+aio_handlers - INFO - join_characters - 706 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - DEBUG - remove_player_by - 80 - gamemaster is leaving non-empty room
+aio_handlers - INFO - remove_player_by - 84 - new gamemaster appointed
+aio_handlers - DEBUG - remove_player_by - 136 - player leaves while choosing position
+aio_handlers - DEBUG - remove_player_by - 140 - gamemaster chose position and left
+aio_handlers - DEBUG - remove_player_by - 145 - gamemaster leaves while choosing position
+aio_handlers - INFO - remove_player_by - 189 - informing new gamemaster
+aio_handlers - INFO - remove_player_by - 209 - informing about people choosing position
+aio_handlers - DEBUG - remove_player_by - 80 - gamemaster is leaving non-empty room
+aio_handlers - INFO - remove_player_by - 84 - new gamemaster appointed
+aio_handlers - DEBUG - remove_player_by - 136 - player leaves while choosing position
+aio_handlers - DEBUG - remove_player_by - 145 - gamemaster leaves while choosing position
+aio_handlers - INFO - remove_player_by - 189 - informing new gamemaster
+aio_handlers - INFO - remove_player_by - 209 - informing about people choosing position
+aio_handlers - INFO - join_characters - 706 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 706 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 712 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 954 - Выбрана недоступная позиция
+aio_handlers - INFO - play - 785 - all positions are chosen
+aio_handlers - INFO - join_characters - 707 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 954 - Выбрана недоступная позиция
+aio_handlers - INFO - play - 786 - all positions are chosen
+aio_handlers - INFO - join_characters - 707 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 954 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - play - 786 - all positions are chosen
+aio_handlers - DEBUG - remove_player_by - 101 - the last player left, room is destroyed
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - DEBUG - remove_player_by - 101 - the last player left, room is destroyed
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - play - 786 - all positions are chosen
