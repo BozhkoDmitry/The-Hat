@@ -388,3 +388,47 @@ aio_handlers - INFO - play - 786 - all positions are chosen
 aio_handlers - INFO - join_characters - 707 - availible positions [1]
 aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
 aio_handlers - INFO - play - 786 - all positions are chosen
+aio_handlers - INFO - join_characters - 707 - availible positions [1]
+aio_handlers - INFO - join_characters - 713 - characters successfully shuffled
+aio_handlers - INFO - play - 786 - all positions are chosen
+aio_handlers - INFO - join_characters - 716 - availible positions [1]
+aio_handlers - INFO - join_characters - 722 - characters successfully shuffled
+aio_handlers - INFO - play - 795 - all positions are chosen
+aio_handlers - INFO - join_characters - 716 - availible positions [1]
+aio_handlers - INFO - join_characters - 722 - characters successfully shuffled
+aio_handlers - INFO - play - 795 - all positions are chosen
+aio_handlers - INFO - join_characters - 716 - availible positions [1]
+aio_handlers - INFO - join_characters - 722 - characters successfully shuffled
+aio_handlers - INFO - play - 795 - all positions are chosen
+aio_handlers - INFO - join_characters - 713 - availible positions [1]
+aio_handlers - INFO - join_characters - 719 - characters successfully shuffled
+aio_handlers - INFO - play - 792 - all positions are chosen
+aio_handlers - INFO - join_characters - 668 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 674 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 674 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 918 - Выбрана недоступная позиция
+aio_handlers - INFO - play - 723 - some positions are not chosen
+aio_handlers - INFO - play - 747 - all positions are chosen
+aio_handlers - INFO - join_characters - 676 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 682 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 682 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 926 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 675 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 681 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 681 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 925 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 682 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 688 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 688 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 932 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 691 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 697 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 697 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 941 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 694 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 700 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 944 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 695 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 701 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 701 - characters successfully shuffled

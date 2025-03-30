@@ -1,3 +1,3 @@
-my_list = []
+from game_classes import Room
 
-print(len(my_list))
+print(Room.Messages.TRY_DIFFERENT_NUMBER)
