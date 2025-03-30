@@ -432,3 +432,29 @@ aio_handlers - INFO - choose_guesser - 944 - Выбрана недоступна
 aio_handlers - INFO - join_characters - 695 - availible positions [1, 2]
 aio_handlers - INFO - join_characters - 701 - characters successfully shuffled
 aio_handlers - INFO - join_characters - 701 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 698 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 948 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 701 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 707 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 707 - characters successfully shuffled
+aio_handlers - INFO - choose_guesser - 951 - Выбрана недоступная позиция
+aio_handlers - INFO - join_characters - 702 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 708 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 708 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 702 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 708 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 708 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 703 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 709 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 709 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 703 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 709 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 709 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 697 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 703 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 703 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 698 - availible positions [1, 2]
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled

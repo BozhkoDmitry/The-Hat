@@ -98,6 +98,12 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         await send_message(outcast.id_number, text=outcast.Messages.FINISH_ROUND)
         return
 
+    if room:
+        logging.info(
+            f'{[player.name for player in room.players]}'
+            f'{[player.name for player in Player.PLAYERS.values()]}'
+        )
+
     new_gamemaster = None
     if outcast.is_gamemaster and room and len(room.players) > 1:
         logging.info('Ведущий выходит из комнаты')
@@ -112,24 +118,20 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             logging.info('Нет ни одного зарегестрированного игрока, комната будет удалена')
             for player in room.players:
                 player: Player
-                logging.info(f'{player.name}')
-                room.players.remove(player)
                 if player in Player.PLAYERS.values():
-                    logging.info(f'{player.id_number}')
+                    player.PLAYERS.pop(player.id_number, None)
                     await send_message(
                         player.id_number,
-                        text=(
-                            'В комнате не осталось зарегестрированных игроков. Игра окончена. '
-                            'Если хотите сыграть ещё раз введите команду "/start"'
-                        ),
+                        text=player.Messages.GAME_EXITED,
                         reply_markup=kb.start_keyboard
                     )
-                    player.PLAYERS.pop(player.id_number, None)
+            room.players.clear()
             room.ROOMS.pop(room.id_number, None)
             room.ROOM_LOCKS.pop(room.id_number, None)
             if room.id_number in room.TAKEN_ROOM_NUMBERS:
                 room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
             return
+
         room.gamemaster = new_gamemaster.id_number
         new_gamemaster.is_gamemaster = True
 
@@ -620,8 +622,9 @@ async def add_character(message: Message, state: FSMContext):
             await message.answer(
                 reply_markup=ReplyKeyboardRemove(),
                 text=(
-                    'Вы добавили всех персонажей: '
-                    f"{', '.join(player.characters)}"
+                    'Вы добавили всех персонажей:\n'
+                    f"{', '.join(player.characters)}\n\n"
+                    'Дождитесь пока ведущий смешает всех персонажей'
                 )
             )
             if player.is_gamemaster:
