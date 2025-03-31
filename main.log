@@ -458,3 +458,6 @@ aio_handlers - INFO - join_characters - 703 - characters successfully shuffled
 aio_handlers - INFO - join_characters - 698 - availible positions [1, 2]
 aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
 aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - join_characters - 698 - availible positions [1]
+aio_handlers - INFO - join_characters - 704 - characters successfully shuffled
+aio_handlers - INFO - play - 777 - all positions are chosen

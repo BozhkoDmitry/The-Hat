@@ -57,7 +57,7 @@ play_keyboard = ReplyKeyboardMarkup(
 
 start_round_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Начать раунд')],
+        [KeyboardButton(text='Начать ход')],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
