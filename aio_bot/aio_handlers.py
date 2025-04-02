@@ -1,23 +1,16 @@
 import asyncio
 import logging
-import os
 
 import aio_keybords as kb
 from aio_states import Reg
-from aiogram import Bot, F, Router
+from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, CommandStart
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
-from dotenv import load_dotenv
+from bot import bot, on_shutdown, send_message
 from game_classes import Player, Room
 from logger import get_logger
-
-load_dotenv()
-
-TOKEN = os.getenv('TOKEN')
-
-bot = Bot(token=TOKEN)
 
 router = Router()
 
@@ -36,12 +29,6 @@ ADMINS = [413470404]
 
 def is_admin(message: Message):
     return message.from_user.id in ADMINS
-
-
-async def send_message(chat_id, text, reply_markup=None):
-    await bot.send_message(
-        chat_id=chat_id, text=text, reply_markup=reply_markup
-    )
 
 
 def get_player_id_by(callback: CallbackQuery = None, message: Message = None):
@@ -81,10 +68,12 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     room: Room = get_room_by(room_id=outcast.room_id) if outcast else None
 
     kick_player = True
+    destroy_room = False
     new_gamemaster_message = None
     refresh_positions = False
     people_left_in_open_room = False
     not_all_people_chose_positions = False
+    new_gamemaster = None
 
     if not outcast:
         await message.answer(
@@ -98,13 +87,6 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         await send_message(outcast.id_number, text=outcast.Messages.FINISH_ROUND)
         return
 
-    if room:
-        logging.info(
-            f'{[player.name for player in room.players]}'
-            f'{[player.name for player in Player.PLAYERS.values()]}'
-        )
-
-    new_gamemaster = None
     if outcast.is_gamemaster and room and len(room.players) > 1:
         logging.info('Ведущий выходит из комнаты')
         for player in room.players:
@@ -116,31 +98,18 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         if not new_gamemaster:
             logging.info('Не удалось назначить нового ведущего')
             logging.info('Нет ни одного зарегестрированного игрока, комната будет удалена')
-            for player in room.players:
-                player: Player
-                if player in Player.PLAYERS.values():
-                    player.PLAYERS.pop(player.id_number, None)
-                    await send_message(
-                        player.id_number,
-                        text=player.Messages.GAME_EXITED,
-                        reply_markup=kb.start_keyboard
-                    )
-            room.players.clear()
-            room.ROOMS.pop(room.id_number, None)
-            room.ROOM_LOCKS.pop(room.id_number, None)
-            if room.id_number in room.TAKEN_ROOM_NUMBERS:
-                room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
-            return
-
-        room.gamemaster = new_gamemaster.id_number
-        new_gamemaster.is_gamemaster = True
+            destroy_room = True
+        else:
+            room.gamemaster = new_gamemaster.id_number
+            new_gamemaster.is_gamemaster = True
 
     if not room:
         logging.info('Игрок выходит до входа в комнату')
         kick_player = False
 
     elif len(room.players) == 1:
-        logging.info('Последний игрок покинул комнату - комната удалена')
+        logging.info('Последний игрок покинул комнату - комната будет удалена')
+        destroy_room = True
         room.ROOMS.pop(room.id_number, None)
         room.ROOM_LOCKS.pop(room.id_number, None)
         if room.id_number in room.TAKEN_ROOM_NUMBERS:
@@ -157,7 +126,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         if outcast in room.unready_players:
             room.unready_players.remove(outcast)
         if outcast.is_gamemaster:
-            new_gamemaster_message = 'Вы теперь ведущий. После ввода персонажей нажмите "Смешать персонажей".'
+            new_gamemaster_message = 'Вы теперь ведущий. После ввода персонажей нажмите кнопку "Смешать персонажей".'
 
     elif not room.players_ready:
         logging.info('Игрок выходит во время выбора позиций')
@@ -166,7 +135,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             room.availible_positions.append(outcast.position)
             outcast.has_order = False
         if outcast.is_gamemaster:
-            new_gamemaster_message = 'Вы теперь ведущий. Когда все выберут позиции, нажмите "Игроки готовы".'
+            new_gamemaster_message = 'Вы теперь ведущий. Когда все выберут позиции, нажмите кнопку "Игроки готовы".'
             not_all_people_chose_positions = True
 
     else:
@@ -176,7 +145,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             guesser: Player = room.get_next_player(outcast)
             await send_message(
                 guesser.id_number,
-                text='Ваш напарник покинул игру в свой ход. Теперь ваша очередь.',
+                text='Ваш напарник покинул игру в свой ход. Теперь ваша очередь ходить',
                 reply_markup=kb.start_round_keyboard
             )
             room.end_round()
@@ -187,7 +156,15 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
         reply_markup=kb.start_keyboard,
         text=outcast.Messages.GAME_EXITED
     )
-    del outcast.PLAYERS[outcast.id_number]
+    outcast.PLAYERS.pop(outcast.id_number, None)
+
+    if destroy_room:
+        logging.info('Удаление комнаты')
+        room.players.clear()
+        room.ROOMS.pop(room.id_number, None)
+        room.ROOM_LOCKS.pop(room.id_number, None)
+        if room.id_number in room.TAKEN_ROOM_NUMBERS:
+            room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
 
     if kick_player and room.id_number in room.ROOM_LOCKS:
         async with room.ROOM_LOCKS[room.id_number]:
@@ -849,6 +826,7 @@ async def start_round(message: Message, state: FSMContext):
             await message.answer(
                 text='Вы принудительно завершили игру'
             )
+            break
 
         if room.times_up() or not room.characters:
             if not room.characters:
@@ -1011,3 +989,18 @@ async def info(message: Message):
     await message.answer(
         text=rules
     )
+
+
+@router.message(Command('shutdown'))
+async def shutdown_handler(message: Message):
+    """Выключает бота по команде /shutdown"""
+
+    if not is_admin(message):
+        return
+
+    await message.answer("🛑 Выключаюсь...")
+
+    await on_shutdown(bot)
+
+    loop = asyncio.get_event_loop()
+    loop.stop()
