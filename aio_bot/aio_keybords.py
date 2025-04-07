@@ -3,13 +3,14 @@ from aiogram.types import (
     KeyboardButton, ReplyKeyboardMarkup
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
+from texts import Commands, CallbackData
 
 RESIZE = True
 ONE_TIME = False
 
 start_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='/start')],
+        [KeyboardButton(text=Commands.START_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -17,7 +18,7 @@ start_keyboard = ReplyKeyboardMarkup(
 
 add_characters_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Добавить персонажей ➕')],
+        [KeyboardButton(text=Commands.ADD_CHARACTERS_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -25,7 +26,7 @@ add_characters_keyboard = ReplyKeyboardMarkup(
 
 join_characters_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Смешать персонажей 🔁')],
+        [KeyboardButton(text=Commands.JOIN_CHARACTERS_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -33,23 +34,16 @@ join_characters_keyboard = ReplyKeyboardMarkup(
 
 close_room_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Закрыть комнату 🚪')],
+        [KeyboardButton(text=Commands.CLOSE_ROOM_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
 )
 
-set_position_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text='Выбрать напарника')],
-    ],
-    resize_keyboard=RESIZE,
-    one_time_keyboard=ONE_TIME,
-)
 
 play_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Игроки готовы')],
+        [KeyboardButton(text=Commands.PLAYERS_ARE_READY_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -57,7 +51,7 @@ play_keyboard = ReplyKeyboardMarkup(
 
 start_round_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='Начать ход')],
+        [KeyboardButton(text=Commands.MAKE_THE_MOVE_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -66,17 +60,27 @@ start_round_keyboard = ReplyKeyboardMarkup(
 
 exit_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text='/exit')],
+        [KeyboardButton(text=Commands.EXIT_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
+)
+
+exit_inline = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text='Выйти из прошлой игры', callback_data='exit'
+            )
+        ]
+    ]
 )
 
 character_inline = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text='Следующий пресонаж', callback_data='next_character'
+                text='Следующий пресонаж', callback_data=CallbackData.NEXT_CHARACTER_DATA
             )
         ]
     ]
@@ -86,12 +90,12 @@ new_keyboard_inline = InlineKeyboardMarkup(
     inline_keyboard=[
         [
             InlineKeyboardButton(
-                text='Создать новую комнату', callback_data='new_room'
+                text='Создать новую комнату', callback_data=CallbackData.NEW_ROOM_DATA
             )
         ],
         [
             InlineKeyboardButton(
-                text='Войти в комнату', callback_data='enter_room'
+                text='Войти в комнату', callback_data=CallbackData.ENTER_ROOM_DATA
             )
         ]
     ]

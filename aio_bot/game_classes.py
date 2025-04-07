@@ -1,51 +1,12 @@
-import os
 from random import choice, randint
 from time import time
 
 from aiogram.types import Message
-from dotenv import load_dotenv
-
-load_dotenv()
+from texts import Flags
 
 
 class Player:
     PLAYERS = {}
-
-    class Messages:
-        CREATE_OR_ENTER_ROOM = os.getenv('CREATE_OR_ENTER_ROOM')
-        EXIT_PREVIOUS_GAME = os.getenv('EXIT_PREVIOUS_GAME')
-        ENTER_YOUR_NAME = os.getenv('ENTER_YOUR_NAME')
-        ENTER_NUMBER_OF_CHARACTERS = os.getenv('ENTER_NUMBER_OF_CHARACTERS')
-        ENTER_FIRST_CHARACTER = os.getenv('ENTER_FIRST_CHARACTER')
-        ENTER_ROOM_ID = os.getenv('ENTER_ROOM_ID')
-        ENTER_POSITION = os.getenv('ENTER_POSITION')
-        OK = os.getenv('OK')
-        ROOM_ENTERED = os.getenv('ROOM_ENTERED')
-        ROOM_IS_CLOSED = os.getenv('ROOM_IS_CLOSED')
-        PLAYER_NOT_REGISTERED = os.getenv('PLAYER_NOT_REGISTERED')
-        CLOSE_ROOM = os.getenv('CLOSE_ROOM')
-        PLAYER_IS_IMPOSTOR = os.getenv('PLAYER_IS_IMPOSTOR')
-        ROOM_NOT_ENTERED = os.getenv('ROOM_NOT_ENTERED')
-        WAIT_FOR_OTHER_PLAYERS = os.getenv('WAIT_FOR_OTHER_PLAYERS')
-        WAIT_FOR_YOUR_TURN = os.getenv('WAIT_FOR_YOUR_TURN')
-        FIRST_PLAYER_MOVE = os.getenv('FIRST_PLAYER_MOVE')
-        YOUR_MOVE = os.getenv('YOUR_MOVE')
-        ALL_CHARACTERS_GUESSED = os.getenv('ALL_CHARACTERS_GUESSED')
-        START_ROUND = os.getenv('START_ROUND')
-        FINISH_ROUND = os.getenv('FINISH_ROUND')
-        GAME_EXITED = os.getenv('GAME_EXITED')
-        GAME_OVER = os.getenv('GAME_OVER')
-        PLAYER_NOT_ORDERED = os.getenv('PLAYER_NOT_ORDERED')
-        READY_TO_PLAY = os.getenv('READY_TO_PLAY')
-        JOIN_CHARACTERS = os.getenv('JOIN_CHARACTERS')
-        ENTER_ORDER = os.getenv('ENTER_ORDER')
-        CHARACTERS_JOINED = os.getenv('CHARACTERS_JOINED')
-        ADD_CHARACTERS = os.getenv('ADD_CHARACTERS')
-        NOT_ENOUGH_CHARACTERS = os.getenv('NOT_ENOUGH_CHARACTERS')
-        MESSAGE_NOT_INTEGER = os.getenv('MESSAGE_NOT_INTEGER')
-        POSITION_UNAVAILIBLE = os.getenv('POSITION_UNAVAILIBLE')
-        ROOM_NUMBER_OUT_OF_RANGE = os.getenv('ROOM_NUMBER_OUT_OF_RANGE')
-        ROOM_DOESNT_EXIST = os.getenv('ROOM_DOESNT_EXIST')
 
     def __init__(self, id_number):
         self.id_number = id_number
@@ -73,25 +34,25 @@ class Player:
         try:
             value = int(message.text)
             if value < Room.MIN_ROOM_NUMBER or value > Room.MAX_ROOM_NUMBER:
-                return self.Messages.ROOM_NUMBER_OUT_OF_RANGE
+                return Flags.ROOM_NUMBER_OUT_OF_RANGE
             elif value not in Room.TAKEN_ROOM_NUMBERS:
-                return self.Messages.ROOM_DOESNT_EXIST
+                return Flags.ROOM_DOESNT_EXIST
             else:
-                return self.Messages.OK
+                return Flags.OK
         except ValueError:
-            return self.Messages.MESSAGE_NOT_INTEGER
+            return Flags.MESSAGE_NOT_INTEGER
 
     def check_number_of_characters(self, message: Message):
         try:
             value = int(message.text)
             if value < Room.MIN_NUMBER_OF_CHARACTERS:
-                return self.Messages.NOT_ENOUGH_CHARACTERS
+                return Flags.NOT_ENOUGH_CHARACTERS
             elif not self.is_gamemaster:
-                return self.Messages.PLAYER_IS_IMPOSTOR
+                return Flags.PLAYER_IS_IMPOSTOR
             else:
-                return self.Messages.OK
+                return Flags.OK
         except ValueError:
-            return self.Messages.MESSAGE_NOT_INTEGER
+            return Flags.MESSAGE_NOT_INTEGER
 
     def set_position(self, position):
         self.position = position-1
@@ -142,29 +103,12 @@ class Room:
                 break
         return room_id
 
-    def check_position(self, message: Message):
-        try:
-            position = int(message.text)
-            if position not in self.availible_positions:
-                return Player.Messages.POSITION_UNAVAILIBLE
-            else:
-                return Player.Messages.OK
-        except ValueError:
-            return Player.Messages.MESSAGE_NOT_INTEGER
-
     def add_player(self, player: Player):
         if player not in self.players:
             self.players.append(player)
 
     def get_character(self):
-        while True:
-            if self.characters:
-                character = choice(self.characters)
-                if character not in self.guessed_characters:
-                    break
-            else:
-                return Player.Messages.ALL_CHARACTERS_GUESSED
-        return character
+        return choice(self.characters) if self.characters else None
 
     def get_next_player(self, player: Player):
         position = player.position+1

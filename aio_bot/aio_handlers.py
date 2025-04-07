@@ -10,17 +10,16 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from bot import bot, on_shutdown, send_message
 from game_classes import Player, Room
-from logger import get_logger
+from texts import Messages, Commands, CallbackData, Flags
 
 router = Router()
 
-logger = get_logger(__name__)
 
 logging.basicConfig(
-    level=logging.INFO,  # Устанавливаем уровень логирования
-    format="%(funcName)s- %(levelname)s - %(message)s",  # Формат сообщений
+    level=logging.INFO,
+    format="%(funcName)s- %(levelname)s - %(message)s",
     handlers=[
-        logging.StreamHandler()  # Вывод в консоль
+        logging.StreamHandler()
     ]
 )
 
@@ -35,24 +34,24 @@ def get_player_id_by(callback: CallbackQuery = None, message: Message = None):
     return callback.message.chat.id if callback else message.from_user.id if message else None
 
 
-def get_player_by_id(player_id: int = None):
-    return Player.PLAYERS.get(player_id) if player_id else None
+def get_player_by_id(player_id):
+    return Player.PLAYERS.get(player_id)
 
 
-def get_room_by(room_id: int = None):
-    return Room.ROOMS.get(room_id) if room_id else None
+def get_room_by(room_id):
+    return Room.ROOMS.get(room_id)
 
 
-def create_player_with(callback: CallbackQuery = None, message: Message = None, player_id: int = None):
-    player_id = player_id or get_player_id_by(callback, message)
+def create_player_with(callback: CallbackQuery = None, message: Message = None):
+    player_id = get_player_id_by(callback, message)
 
-    if not get_player_by_id(player_id=player_id):
+    if not get_player_by_id(player_id):
         player = Player(player_id)
         Player.PLAYERS[player.id_number] = player
         return player
 
 
-async def remove_player_by(callback: CallbackQuery = None, message: Message = None, player_id: int = None):
+async def remove_player_by(callback: CallbackQuery = None, message: Message = None):
     """
     Удаляет игрока из комнаты, обрабатывая различные сценарии:
     - Если игрока нет в игре, отправляет сообщение о необходимости регистрации.
@@ -63,9 +62,9 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     """
     logging.info("Удаление игрока из игры")
 
-    player_id = player_id or get_player_id_by(callback, message)
-    outcast: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=outcast.room_id) if outcast else None
+    player_id = get_player_id_by(callback, message)
+    outcast: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(outcast.room_id) if outcast else None
 
     kick_player = True
     destroy_room = False
@@ -74,17 +73,22 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     people_left_in_open_room = False
     not_all_people_chose_positions = False
     new_gamemaster = None
+    send_shuffle_button = False
 
     if not outcast:
+        logging.info('Игрок выходит до регистрации')
         await message.answer(
-            text='Вы ещё не зарегистрировались в игре',
+            text=Messages.PLAYER_NOT_REGISTERED_YET,
             reply_markup=kb.start_keyboard
         )
         return
 
     if outcast.is_playing:
         logging.info('Игрок не может выйти во время игры')
-        await send_message(outcast.id_number, text=outcast.Messages.FINISH_ROUND)
+        await send_message(
+            outcast.id_number,
+            text=Messages.FINISH_ROUND
+        )
         return
 
     if outcast.is_gamemaster and room and len(room.players) > 1:
@@ -110,23 +114,28 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     elif len(room.players) == 1:
         logging.info('Последний игрок покинул комнату - комната будет удалена')
         destroy_room = True
-        room.ROOMS.pop(room.id_number, None)
-        room.ROOM_LOCKS.pop(room.id_number, None)
-        if room.id_number in room.TAKEN_ROOM_NUMBERS:
-            room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
         kick_player = False
 
     elif room.open and outcast.is_gamemaster:
         logging.info('Ведущий покидает открытую комнату')
-        new_gamemaster_message = 'Вы теперь ведущий. Закройте комнату, когда все игроки присоединятся.'
+        new_gamemaster_message = Messages.NEW_GAMEMASTER_MESSAGE_FOR_OPEN_ROOM,
         people_left_in_open_room = True
 
     elif not room.characters_united:
         logging.info('Игрок выходит до перемешивания персонажей')
         if outcast in room.unready_players:
             room.unready_players.remove(outcast)
-        if outcast.is_gamemaster:
-            new_gamemaster_message = 'Вы теперь ведущий. После ввода персонажей нажмите кнопку "Смешать персонажей".'
+        if outcast.is_gamemaster and new_gamemaster:
+            if room.unready_players:
+                logging.info('Ведущий покинул игру до того как все игроки ввели совоих персонажей')
+                if new_gamemaster in room.unready_players:
+                    new_gamemaster_message = Messages.NEW_GAMEMASTER_MESSAGE_BEFORE_SHUFFLE
+                else:
+                    new_gamemaster_message = Messages.NEW_GAMEMASTER_MESSAGE_IF_GAMEMASTER_IS_READY
+            else:
+                logging.info('Ведущий единственный не ввёл всех персонажей и покинул игру')
+                new_gamemaster_message = Messages.NEW_GAMEMASTER_MESSAGE_ALL_PLAYERS_ENTERED_CHARACTERS
+                send_shuffle_button = True
 
     elif not room.players_ready:
         logging.info('Игрок выходит во время выбора позиций')
@@ -135,7 +144,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             room.availible_positions.append(outcast.position)
             outcast.has_order = False
         if outcast.is_gamemaster:
-            new_gamemaster_message = 'Вы теперь ведущий. Когда все выберут позиции, нажмите кнопку "Игроки готовы".'
+            new_gamemaster_message = Messages.NEW_GAMEMASTER_MESSAGE_DURING_POSITION_CHOICE
             not_all_people_chose_positions = True
 
     else:
@@ -145,7 +154,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
             guesser: Player = room.get_next_player(outcast)
             await send_message(
                 guesser.id_number,
-                text='Ваш напарник покинул игру в свой ход. Теперь ваша очередь ходить',
+                text=Messages.PARTNER_LEFT_GAME_MESSAGE,
                 reply_markup=kb.start_round_keyboard
             )
             room.end_round()
@@ -154,7 +163,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
     await send_message(
         outcast.id_number,
         reply_markup=kb.start_keyboard,
-        text=outcast.Messages.GAME_EXITED
+        text=Messages.GAME_EXITED
     )
     outcast.PLAYERS.pop(outcast.id_number, None)
 
@@ -173,7 +182,13 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
                 room.refresh_players_positions()
 
     if new_gamemaster and new_gamemaster_message:
-        await send_message(new_gamemaster.id_number, text=new_gamemaster_message)
+
+        await send_message(
+            new_gamemaster.id_number,
+            text=new_gamemaster_message,
+            reply_markup=kb.join_characters_keyboard if send_shuffle_button else None
+        )
+
         if people_left_in_open_room:
             open_room_names = [player.name for player in room.players]
             await send_message(
@@ -181,6 +196,7 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
                 text=f'Игроки в комнате: {", ".join(open_room_names)}',
                 reply_markup=kb.close_room_keyboard
             )
+
         elif not_all_people_chose_positions:
             position_names = [player.name for player in room.players if player.has_order]
             await send_message(
@@ -191,320 +207,444 @@ async def remove_player_by(callback: CallbackQuery = None, message: Message = No
 
 
 def create_room(gamemaster: Player):
+    """
+    Создаёт новую игровую комнату и назначает игрока ведущим.
+
+    - Инициализирует объект Room
+    - Присваивает игроку ID комнаты и статус ведущего
+    - Добавляет ведущего в список игроков комнаты
+    - Регистрирует комнату и блокировку в глобальных словарях Room
+    """
     room = Room(gamemaster.id_number)
     gamemaster.room_id = room.id_number
     gamemaster.is_gamemaster = True
     room.players.append(gamemaster)
     room.ROOMS[room.id_number] = room
     room.ROOM_LOCKS[room.id_number] = asyncio.Lock()
+    logging.info(f"Создана новая комната с ID {room.id_number} для ведущего {gamemaster.id_number}")
     return room
 
 
 async def end_round(
-        room: Room,
-        player: Player,
+        room: Room, player: Player,
+        last_message: Message = None,
         times_up=False,
-        last_message: Message = None
 ):
+    """
+    Завершает раунд игры:
+    - Если время вышло: уведомляет текущего и следующего игрока.
+    - Если персонажи угаданы: показывает таблицу лидеров, увеличивает раунд.
+    - Проверяет, завершилась ли игра, и, если да, вызывает завершение.
+    - Передаёт ход следующему игроку.
+    """
     guesser: Player = room.get_next_player(player)
 
     if times_up:
+        times_up_message = f'{Messages.TIMES_UP}{player.round_score}'
 
         if last_message:
             await bot.edit_message_text(
                 chat_id=last_message.chat.id,
                 message_id=last_message.message_id,
-                text='Неугаданный персонаж',
+                text=Messages.UNGUESSED_CHARACTER,
                 reply_markup=None
             )
+            logging.info(f"Сообщение с неотгаданным персонажем обновлено в чате {last_message.chat.id}")
 
         await send_message(
             player.id_number,
-            text=(
-                'Время вышло!\n\n'
-                'Количество заработаных очков в этот ход: '
-                f'{player.round_score}'
-            )
+            text=times_up_message
         )
+        logging.info(f"Игроку {player.id_number} отправлено сообщение о завершении по таймеру")
 
         if player != guesser:
             await send_message(
                 guesser.id_number,
-                text=(
-                    'Время вышло!\n\n'
-                    'Количество заработаных очков в этот ход: '
-                    f'{guesser.round_score}'
-                )
+                text=times_up_message
             )
+            logging.info(f"Следующему игроку {guesser.id_number} также отправлено сообщение о завершении раунда")
 
     else:
-        sorted_players = sorted(room.players, key=lambda player: player.score, reverse=True)
+        sorted_players = sorted(
+            room.players, key=lambda player: player.score, reverse=True
+        )
+        logging.info(f"Формируется таблица результатов раунда {room.round} для комнаты {room.id_number}")
 
-        logger.info(f'{sorted_players}\n\n{room.players}')
-
-        score_board = ''
-
-        for player in sorted_players:
-            score_board += f'\n{player.name} : {player.score}'
+        score_board = Messages.TABLE_HEAD + "\n\n".join(
+            f"🔹 {i+1} | {player.name} | {player.score}" for i, player in enumerate(sorted_players)
+        )
 
         for person in room.players:
             person: Player
             await send_message(
                 person.id_number,
-                text=person.Messages.ALL_CHARACTERS_GUESSED
+                text=Messages.ALL_CHARACTERS_GUESSED
             )
             await send_message(
                 person.id_number,
                 text=(
-                    f'Закончился раунд № {room.round}\n\n'
+                    f'{Messages.FINISHED_ROUND_NUMBER} {room.round}\n\n'
                     f'{score_board}'
                 )
             )
 
         room.next_round()
+        logging.info(f"Переход к следующему раунду — теперь раунд {room.round}")
         if room.last_round():
-            await game_over(room=room)
+            logging.info(f"Игра в комнате {room.id_number} завершена")
+            await game_over(room)
             return
 
     await send_message(
         guesser.id_number,
         reply_markup=kb.start_round_keyboard,
-        text=guesser.Messages.YOUR_MOVE
+        text=Messages.YOUR_MOVE
     )
+    logging.info(f"Игроку {guesser.id_number} передан ход")
+
     room.end_round()
+    logging.info(f"Раунд завершён в комнате {room.id_number}")
 
 
 async def game_over(room: Room):
+    """
+    Завершает игру в комнате:
+    - Уведомляет всех игроков об окончании игры.
+    - Очищает игроков и удаляет комнату из всех глобальных структур.
+    """
+
+    logging.info(f"Игра в комнате {room.id_number} завершена. Очистка данных...")
 
     for player in room.players:
         player: Player
         await send_message(
             player.id_number,
-            text=player.Messages.GAME_OVER
+            text=Messages.GAME_OVER
         )
         await send_message(
             player.id_number,
             reply_markup=kb.start_keyboard,
-            text=(
-                'Если хотите сыграть ещё раз введите '
-                'команду "/start"'
-            )
+            text=Messages.GAME_EXITED
         )
-        del player.PLAYERS[player.id_number]
+        player.PLAYERS.pop(player.id_number, None)
 
-    del room.ROOMS[room.id_number]
-    del room.ROOM_LOCKS[room.id_number]
-    room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
+    room.players.clear()
+    room.ROOMS.pop(room.id_number, None)
+    room.ROOM_LOCKS.pop(room.id_number, None)
+    if room.id_number in room.TAKEN_ROOM_NUMBERS:
+        room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
 
 
 @router.message(CommandStart())
 async def start(message: Message):
+    """
+    Обработчик команды /start.
+
+    Проверяет, существует ли игрок и находится ли он в комнате.
+    Если игрока или комнаты нет — отправляет приветственное сообщение
+    и предлагает создать или войти в комнату.
+    Если игрок уже находится в комнате — просит выйти из предыдущей игры.
+    """
+    logging.info(f"Пользователь {message.from_user.id} вызвал команду /start")
+
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not (player and room):
         await message.answer(
-            text='Добро пожаловать в игру "Шляпа"',
+            text=Messages.WELCOME_MESSAGE,
             reply_markup=ReplyKeyboardRemove()
         )
         await message.answer(
-            text=Player.Messages.CREATE_OR_ENTER_ROOM,
+            text=Messages.CREATE_OR_ENTER_ROOM,
             reply_markup=kb.new_keyboard_inline
         )
-        return None
+        return
 
     await message.answer(
-        text=Player.Messages.EXIT_PREVIOUS_GAME,
+        text=Messages.EXIT_PREVIOUS_GAME,
         reply_markup=kb.exit_keyboard
     )
 
 
-@router.callback_query(F.data == 'new_room')
+@router.callback_query(F.data == CallbackData.NEW_ROOM_DATA)
 async def new_room_callback(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик callback-запроса при создании новой комнаты.
+
+    Очищает состояние, создаёт игрока и комнату.
+    Если всё прошло успешно — запускает игру и запрашивает имя.
+    Если не удалось — предлагает выйти из предыдущей игры.
+    """
+
+    logging.info(f"Пользователь {callback.from_user.id} создаёт новую комнату")
+
     await state.clear()
     gamemaster: Player = create_player_with(callback=callback)
     await callback.answer('')
     if gamemaster:
         create_room(gamemaster)
         await callback.message.answer(
-            text='Вы вошли в игру'
+            text=Messages.GAME_STARTED
         )
         await callback.message.answer(
-            text=gamemaster.Messages.ENTER_YOUR_NAME
+            text=Messages.ENTER_YOUR_NAME
         )
         await state.set_state(Reg.name)
         await callback.message.delete()
-        return None
+        logging.info(
+            f"Комната успешно создана пользователем {callback.from_user.id}"
+        )
+        return
 
     await callback.message.answer(
-        text=Player.Messages.EXIT_PREVIOUS_GAME,
+        text=Messages.EXIT_PREVIOUS_GAME,
         reply_markup=kb.exit_keyboard
     )
+    logging.warning(
+        f"Пользователь {callback.from_user.id} "
+        "не может создать новую комнату — уже участвует в игре"
+        )
 
 
-@router.callback_query(F.data == 'enter_room')
+@router.callback_query(F.data == CallbackData.ENTER_ROOM_DATA)
 async def enter_room_callback(callback: CallbackQuery, state: FSMContext):
+    """
+    Обработчик callback-запроса на вход в существующую комнату.
+
+    Создаёт игрока и переводит его в состояние ввода имени,
+    если вход в комнату разрешён. Иначе — предлагает выйти из текущей игры.
+    """
+    logging.info(f"Пользователь {callback.from_user.id} пытается войти в комнату")
+
     player: Player = create_player_with(callback=callback)
     await callback.answer('')
     if player:
         await state.set_state(Reg.name)
         await callback.message.answer(
-            text='Вы вошли в игру'
+            text=Messages.GAME_STARTED
         )
         await callback.message.answer(
-            text=player.Messages.ENTER_YOUR_NAME
+            text=Messages.ENTER_YOUR_NAME
         )
         await callback.message.delete()
-        return None
+        logging.info(f"Игрок {callback.from_user.id} успешно вошёл в комнату")
+        return
 
     await callback.message.answer(
-        text=Player.Messages.EXIT_PREVIOUS_GAME,
+        text=Messages.EXIT_PREVIOUS_GAME,
         reply_markup=kb.exit_keyboard
+    )
+    logging.warning(
+        f"Пользователь {callback.from_user.id} "
+        "не может войти в комнату — уже участвует в игре"
     )
 
 
 @router.message(Reg.name)
 async def add_name(message: Message, state: FSMContext):
+    """
+    Обработчик ввода имени игрока.
+
+    Проверяет корректность имени. Если имя задано, сохраняет его.
+    В зависимости от роли (ведущий или игрок) переводит в соответствующее состояние.
+    """
+    logging.info(f"Пользователь {message.from_user.id} вводит имя")
+
     await state.clear()
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
+    player: Player = get_player_by_id(player_id) if player_id else None
 
     if not message.text:
         await message.answer(
-            text='Пожалуйтса запишите своё имя текстом'
+            text=Messages.WRITE_YOUR_NAME_WITH_TEXT
         )
         await state.set_state(Reg.name)
-        return None
+        logging.info(f"Пользователь {message.from_user.id} отправил пустое сообщение")
+        return
 
-    if message.text == '/exit':
+    if message.text == Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
-        return None
+        logging.info(f"Пользователь {message.from_user.id} покинул игру командой выхода")
+        return
+
+    if message.text.startswith('/'):
+        await message.answer(
+            text=Messages.CANT_REGISTER_COMMAND_AS_NAME
+        )
+        logging.warning(f"Пользователь {message.from_user.id} попытался использовать команду вместо имени: {message.text}")
+        return
 
     player.name = message.text
+    logging.info(f"Имя игрока {player_id} установлено: {player.name}")
 
     if player.is_gamemaster:
         await message.answer(
-            text=player.Messages.ENTER_NUMBER_OF_CHARACTERS,
+            text=Messages.ENTER_NUMBER_OF_CHARACTERS,
         )
         await state.set_state(Reg.number_of_characters)
-        return None
+        logging.info(f"Игрок {player_id} — ведущий. Перевод в состояние ввода количества персонажей.")
+        return
 
     await message.answer(
-        text=player.Messages.ENTER_ROOM_ID,
+        text=Messages.ENTER_ROOM_ID,
         reply_markup=ReplyKeyboardRemove()
     )
     await state.set_state(Reg.room_id)
+    logging.info(f"Игрок {player_id} переведён в состояние ввода ID комнаты")
 
 
 @router.message(Reg.room_id)
 async def add_room_id(message: Message, state: FSMContext):
+    """
+    Обработчик ввода ID комнаты игроком.
+
+    Проверяет корректность введённого ID, статус комнаты и добавляет игрока,
+    если всё в порядке. При необходимости возвращает игрока на повторный ввод.
+    """
+
+    logging.info(f"Пользователь {message.from_user.id} вводит ID комнаты")
+
     await state.clear()
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    result = player.check_room_id(message)
+    player: Player = get_player_by_id(player_id) if player_id else None
+    result = player.check_room_id(message) if player else None
 
-    if message.text == '/exit':
+    if message.text == Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
-        return None
+        logging.info(f"Пользователь {message.from_user.id} покинул игру командой выхода")
+        return
 
-    if result == player.Messages.OK:
+    if result == Flags.OK:
         room_id = int(message.text)
-        room: Room = get_room_by(room_id=room_id)
+        room: Room = get_room_by(room_id)
 
         if not room.open:
             await message.answer(
-                text=player.Messages.ROOM_IS_CLOSED
+                text=Messages.ROOM_IS_CLOSED
             )
             await state.set_state(Reg.room_id)
-            return None
+            logging.info(f"Комната {room_id} закрыта. Игрок {player_id} не был допущен.")
+            return
 
         if player in room.players:
             await message.answer(
-                text=player.Messages.ROOM_ENTERED
+                text=Messages.ROOM_ENTERED
             )
-            return None
+            logging.info(f"Игрок {player_id} уже находится в комнате {room_id}")
+            return
 
         room.players.append(player)
         player.room_id = room_id
 
         await message.answer(
-            text=player.Messages.ROOM_ENTERED
+            text=Messages.ROOM_ENTERED
         )
         await send_message(
             chat_id=room.gamemaster,
             text=f'Игрок {player.name} вошёл в комнату'
         )
-        return None
+        logging.info(f"Игрок {player.name} добавлен в комнату {room_id}")
+        return
 
     await message.answer(
         text=result
     )
-    if result != player.Messages.PLAYER_IS_IMPOSTOR:
+    logging.warning(f"Игрок {player_id} ввёл некорректный ID комнаты: {message.text} — {result}")
+
+    if result != Flags.PLAYER_IS_IMPOSTOR:
         await state.set_state(Reg.room_id)
 
 
 @router.message(Reg.number_of_characters)
 async def add_number_of_charaters(message: Message, state: FSMContext):
+    """
+    Обработчик ввода количества персонажей ведущим.
+
+    Проверяет корректность числа. Если всё корректно — сохраняет его в комнате
+    и отправляет ведущему номер комнаты и кнопку для закрытия.
+    В противном случае — запрашивает повторный ввод.
+    """
+
+    logging.info(f"Ведущий {message.from_user.id} вводит количество персонажей")
+
     await state.clear()
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
     result = player.check_number_of_characters(message)
 
-    if message.text == '/exit':
+    if message.text == Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
-        return None
+        logging.info(f"Ведущий {message.from_user.id} вышел из игры")
+        return
 
-    if result == player.Messages.OK:
+    if result == Flags.OK:
         room.number_of_characters = int(message.text)
         await message.answer(
-            text=player.Messages.CLOSE_ROOM
+            text=Messages.CLOSE_ROOM
         )
         await message.answer(
             reply_markup=kb.close_room_keyboard,
-            text=f'Номер вашей комнаты: {room.id_number}. '
+            text=f'{Messages.YOUR_ROOM_NUMBER_IS}{room.id_number}. '
         )
-        return None
+        logging.info(f"Комната {room.id_number}: установлено количество персонажей — {room.number_of_characters}")
+        return
 
     await message.answer(
         text=result
     )
-    if result != player.Messages.PLAYER_IS_IMPOSTOR:
+    logging.warning(f"Некорректный ввод количества персонажей от {message.from_user.id}: {message.text}")
+
+    if result != Flags.PLAYER_IS_IMPOSTOR:
         await state.set_state(Reg.number_of_characters)
 
 
-@router.message(F.text == 'Закрыть комнату 🚪')
+@router.message(F.text == Commands.CLOSE_ROOM_COMMAND)
 async def close_room(message: Message, state: FSMContext):
+    """
+    Обработчик команды закрытия комнаты ведущим.
+
+    Проверяет: зарегистрирован ли игрок, вошёл ли он в комнату, является ли ведущим,
+    открыта ли ещё комната. При выполнении условий закрывает комнату и уведомляет игроков.
+    """
+
+    logging.info('Вызвана функция закрытия комнаты')
+
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
         await message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
+        logging.warning(f"Незарегистрированный пользователь {message.from_user.id} попытался закрыть комнату")
         return
 
     if not room:
-        await message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        await message.answer(text=Messages.ROOM_NOT_ENTERED)
         await state.set_state(Reg.room_id)
+        logging.warning(f"Игрок {player_id} не состоит ни в одной комнате")
         return
 
     if not player.is_gamemaster:
         await message.answer(
-                text=player.Messages.PLAYER_IS_IMPOSTOR,
-                reply_markup=ReplyKeyboardRemove()
+            text=Flags.PLAYER_IS_IMPOSTOR,
+            reply_markup=ReplyKeyboardRemove()
         )
-        return None
+        logging.warning(f"Игрок {player_id} не является ведущим и попытался закрыть комнату")
+        return
 
     if not room.open:
         await message.answer(
-                text=player.Messages.ROOM_IS_CLOSED,
-                reply_markup=kb.add_characters_keyboard
+            text=Messages.ROOM_IS_CLOSED,
+            reply_markup=kb.add_characters_keyboard
         )
-        return None
+        logging.info(f"Комната {room.id_number} уже была закрыта")
+        return
 
     room.close()
     for player in room.players:
@@ -512,246 +652,286 @@ async def close_room(message: Message, state: FSMContext):
             await send_message(
                 player.id_number,
                 text=(
-                    'Количесво персонажей на эту игру - '
+                    f'{Messages.NUMBER_OF_CHARACTERS_FOR_THIS_GAME_IS}'
                     f'{room.number_of_characters}.'
                 )
             )
         await send_message(
             chat_id=player.id_number,
-            text=player.Messages.ADD_CHARACTERS,
+            text=Messages.ADD_CHARACTERS,
             reply_markup=kb.add_characters_keyboard
         )
+    logging.info(f"Все игроки в комнате {room.id_number} оповещены о начале этапа выбора персонажей")
 
 
-@router.message(F.text == 'Добавить персонажей ➕')
+@router.message(F.text == Commands.ADD_CHARACTERS_COMMAND)
 async def start_adding_characters(message: Message, state: FSMContext):
+    """
+    Обработчик команды добавления персонажей игроком.
+
+    Проверяет регистрацию, наличие комнаты, состояние комнаты и переход игрока
+    к вводу персонажей, если это возможно.
+    """
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
         await message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
         return
 
     if not room:
-        await message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        await message.answer(
+            text=Messages.ROOM_NOT_ENTERED
+        )
         await state.set_state(Reg.room_id)
         return
 
     if room.characters_united:
         await message.answer(
-            text=player.Messages.WAIT_FOR_OTHER_PLAYERS
+            text=Messages.WAIT_FOR_OTHER_PLAYERS
         )
-        return None
+        logging.info('Игрок пытается добавить новых персонажей к уже перемешанным')
+        return
 
     if room.open:
         await message.answer(
-            text=(
-                'Добавлять персонажей можно будет когда комната закроется'
-            )
+            text=Messages.CANT_ADD_CHARACTERS_IN_OPEN_ROOM
         )
+        logging.info(f"Игрок {player_id} пытается добавить персонажей в открытую комнату")
+        return
 
     if not player.characters:
         await message.answer(
             reply_markup=ReplyKeyboardRemove(),
-            text=player.Messages.ENTER_FIRST_CHARACTER
+            text=Messages.ENTER_FIRST_CHARACTER
         )
         await state.set_state(Reg.character)
-        return None
+        logging.info(f"Игрок {player_id} начинает ввод персонажей")
+        return
 
 
 @router.message(Reg.character)
 async def add_character(message: Message, state: FSMContext):
+    """
+    Функция добавления персонажей игрока
+    """
     await state.clear()
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not message.text:
+        logging.info('Игрок записал персонажа не текстом')
         await message.answer(
-            text='Персонажа можно записать только текстом'
+            text=Messages.WRITE_CHARACTER_WITH_TEXT
         )
         await state.set_state(Reg.character)
-        return None
+        return
 
-    if message.text == '/exit':
+    if message.text == Commands.EXIT_COMMAND:
+        logging.info('Игрок вышел во время ввода персонажей')
         await remove_player_by(message=message)
-        return None
+        return
 
-    if message.text == 'Смешать персонажей 🔁':
+    if message.text.startswith('/'):
+        logging.info('Игрок пытается зарегистрировать кмманду для бота в качестве персонажа')
         await message.answer(
-            text=(
-                'Выполните это действие когда закончите '
-                'вводить свох персонажей'
-            )
+            text=Messages.CANT_REGISTER_COMMAND_AS_CHARACTER
+        )
+        return
+
+    if message.text == Commands.JOIN_CHARACTERS_COMMAND:
+        await message.answer(
+            text=Messages.ENTER_ALL_CHARACTERS
         )
         await state.set_state(Reg.character)
-        return None
+        return
 
     character = message.text
     async with room.ROOM_LOCKS[room.id_number]:
         if not player.can_add_more_characters(room):
             player.characters.append(character)
+            logging.info(f'Игрок {player.name} добавил последнего персонажа {character}')
             room.unready_players.remove(player)
             await message.answer(
                 reply_markup=ReplyKeyboardRemove(),
                 text=(
-                    'Вы добавили всех персонажей:\n'
-                    f"{', '.join(player.characters)}\n\n"
-                    'Дождитесь пока ведущий смешает всех персонажей'
+                    Messages.ALL_CHARACTERS_ADDED +
+                    (
+                        "\n".join(
+                            f"🔹 {i+1}. {name}" for i, name in enumerate(player.characters)
+                        )
+                    )
                 )
             )
-            if player.is_gamemaster:
+            logging.info('Игрок получил список своих персонажей')
+
+            if not player.is_gamemaster:
                 await message.answer(
-                    text=player.Messages.JOIN_CHARACTERS
+                    text=Messages.WAIT_FOR_CHARACTER_JOIN
+                )
+            else:
+                await message.answer(
+                    text=Messages.JOIN_CHARACTERS
                 )
             if room.player_is_last():
                 await send_message(
                     room.gamemaster,
-                    text='Все игроки ввели своих персонажей',
+                    text=Messages.ALL_PLAYERS_ENTERD_CHARACTERS,
                     reply_markup=kb.join_characters_keyboard,
                 )
-            return None
+            return
 
     player.characters.append(character)
+    logging.info(f'Игрок {player.name} добавил персонажа {character}')
     await message.answer(
         reply_markup=ReplyKeyboardRemove(),
         text=(
-            'Ведите персонажа № '
+            f'{Messages.ENTER_CHARACTER_NUMBER}'
             f' {player.next_character_number()}'
         )
     )
     await state.set_state(Reg.character)
 
 
-@router.message(F.text == 'Смешать персонажей 🔁')
+@router.message(F.text == Commands.JOIN_CHARACTERS_COMMAND)
 async def join_characters(message: Message, state: FSMContext):
+    """
+    Функция для объединения всех персонажей в один список
+    """
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
         await message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
         return
 
     if not room:
-        await message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        await message.answer(
+            text=Messages.ROOM_NOT_ENTERED
+        )
         await state.set_state(Reg.room_id)
         return
 
     if not player.is_gamemaster:
         await message.answer(
-                text=player.Messages.PLAYER_IS_IMPOSTOR,
-                reply_markup=ReplyKeyboardRemove()
+            text=Flags.PLAYER_IS_IMPOSTOR,
+            reply_markup=ReplyKeyboardRemove()
         )
-        return None
+        return
 
     if room.characters_united:
         await message.answer(
-            text=player.Messages.WAIT_FOR_OTHER_PLAYERS
+            text=Messages.WAIT_FOR_OTHER_PLAYERS
         )
-        return None
+        return
 
     if room.unready_players:
         await message.answer(
-            text=(
-                'Не все игроки успели добавить своих персонажей. '
-                'Попробуйте ещё раз когда все будут готовы'
-            ),
+            text=Messages.NOT_ALL_PLAYERS_ENTERED_CHARACTERS,
             reply_markup=kb.join_characters_keyboard
         )
-        return None
+        return
 
     room.characters_united = True
 
     room.set_availible_positions()
 
-    logger.info(f'availible positions {room.availible_positions}')
-
     for new_player in room.players:
         new_player: Player
         room.characters.extend(new_player.characters)
         new_player.characters.clear()
-        logger.info('characters successfully shuffled')
         await send_message(
             new_player.id_number,
-            text=new_player.Messages.CHARACTERS_JOINED
-        )
-        await send_message(
-            new_player.id_number,
-            reply_markup=await kb.positions_inline(room.availible_positions),
-            text='Выберете номер в очереди'
+            text=(
+                f"{Messages.CHARACTERS_JOINED}"
+            ),
+            reply_markup=await kb.positions_inline(room.availible_positions)
         )
 
     await message.answer(
-        text=(
-            'Когда все игроки выберут номер в очереди, '
-            'нажмите кнопку игроки готовы. Игроки не выбравшие '
-            'номер в очереди будут дисквалифицированны'
-        ),
+        text=Messages.WHEN_ALL_POSITIONS_ARE_CHOSEN,
         reply_markup=kb.play_keyboard
     )
 
 
-@router.message(F.text == 'Игроки готовы')
+@router.message(F.text == Commands.PLAYERS_ARE_READY_COMMAND)
 async def play(message: Message, state: FSMContext):
+    """
+    Функция для создания окончательно списка игроков
+
+    Закрепляет игроков за позициями, которые они выбрали, или
+    новыми позициями, которые были им присвоенны после исключения игроков
+    не выбравших себе позицию. Новые позиция соответствуют порядку возрастания старых
+    """
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
         await message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
         return
 
     if not room:
-        await message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        await message.answer(
+            text=Messages.ROOM_NOT_ENTERED
+        )
         await state.set_state(Reg.room_id)
         return
 
     if not player.is_gamemaster:
         await message.answer(
-                text=player.Messages.PLAYER_IS_IMPOSTOR,
-                reply_markup=ReplyKeyboardRemove()
+            text=Flags.PLAYER_IS_IMPOSTOR,
+            reply_markup=ReplyKeyboardRemove()
         )
-        return None
+        return
 
     extra_players = False
     if room.availible_positions:
         extra_players = True
-        logger.info('some positions are not chosen')
+        logging.info('Некоторые номера не были выбраны')
         if len(room.players) == len(room.availible_positions):
-            logger.info('none of the players chose position')
+            logging.warning('Ни одна позиция не была выбрана')
             await message.answer(
-                text=(
-                    'Нельзя начинать игру пока ни один из '
-                    'игроков не выбрал номер в очреди'
-                )
+                text=Messages.CANT_START_GAME_WITHOUT_POSITIONED_PLAYERS
             )
-            return None
+            return
 
+        players_to_delete = []
         for player in room.players:
             if not player.has_order:
+                players_to_delete.append(player)
+
+        logging.info(f'Игроки, которые будут удалены из комнаты {players_to_delete}')
+
+        for player in players_to_delete:
+            if player in room.players:
                 room.players.remove(player)
+                player.PLAYERS.pop(player.id_number, None)
+                await send_message(
+                    player.id_number,
+                    text=Messages.YOU_DONT_HAVE_POSITION_GAME_OVER
+                )
                 if player.is_gamemaster:
-                    logger.debug('gamemaster didnt choose position and left')
                     new_gamemaster: Player = room.players[0]
-                    logger.debug(f'{new_gamemaster.name}')
                     room.gamemaster = new_gamemaster.id_number
                     new_gamemaster.is_gamemaster = True
 
         room.availible_positions.clear()
         room.refresh_players_positions()
 
-    logger.info('all positions are chosen')
+    logging.info('Все позиции распределены')
     room.players_ready = True
 
     for player in room.players:
@@ -760,17 +940,16 @@ async def play(message: Message, state: FSMContext):
                 player.id_number,
                 reply_markup=ReplyKeyboardRemove(),
                 text=(
-                    'Некоторые игроки не выбрали порядок в очереди '
-                    'и были дисквалифицированны \n'
-                    f'Ваша новая позиция {player.position+1}'
+                    f'{Messages.YOUR_NEW_POSITION}'
+                    f'{player.position+1}'
                 )
             )
         await send_message(
             player.id_number,
             text=(
-                'Вы объясняете персонажей игроку '
+                f'{Messages.YOUR_GUESSER}'
                 f'{room.get_next_player(player).name}\n'
-                'Вам объясняет персонажей игрок '
+                f'{Messages.YOUR_RIDDLER}'
                 f'{room.get_previous_player(player).name}'
             ),
             reply_markup=ReplyKeyboardRemove()
@@ -779,42 +958,57 @@ async def play(message: Message, state: FSMContext):
             await send_message(
                 player.id_number,
                 reply_markup=kb.start_round_keyboard,
-                text=player.Messages.FIRST_PLAYER_MOVE
+                text=Messages.FIRST_PLAYER_MOVE
             )
 
 
-@router.message(F.text == 'Начать ход')
+@router.message(F.text == Commands.MAKE_THE_MOVE_COMMAND)
 async def start_round(message: Message, state: FSMContext):
+    """
+    Обработка начала хода игрока:
+    - Проверяет регистрацию игрока и принадлежность к комнате.
+    - Проверяет, готова ли комната и является ли сейчас ход игрока.
+    - Запускает раунд и выдаёт персонажа для объяснения.
+    - По окончанию времени или при отсутствии персонажей завершает раунд.
+    """
     player_id = get_player_id_by(message=message)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
+        logging.warning("Игрок не зарегистрирован")
         await message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
         return
 
     if not room:
-        await message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        logging.warning(f"Игрок {player.name} не вошёл в комнату")
+        await message.answer(
+            text=Messages.ROOM_NOT_ENTERED
+        )
         await state.set_state(Reg.room_id)
         return
 
     if not room.players_ready:
+        logging.info(f"Игрок {player.name} начал ход до подтверждения готовности комнаты")
         await message.answer(
-            text='Ведущий должен объявить что все игроки готовы'
+            text=Messages.HOST_HASNT_CLAIMED_PLAYERS_READY
         )
-        return None
+        return
 
     if not room.check_players_order(player):
+        logging.info(f"Игрок {player.name} попытался начать не в свою очередь")
         await message.answer(
-            text=player.Messages.WAIT_FOR_YOUR_TURN
+            text=Messages.WAIT_FOR_YOUR_TURN
         )
-        return None
+        return
+
+    logging.info(f"Игрок {player.name} начал раунд")
 
     await message.answer(
-        text='Ваш ход начался',
+        text=Messages.YOUR_MOVE_HAS_BEGUN,
         reply_markup=ReplyKeyboardRemove()
     )
     room.start_round()
@@ -823,6 +1017,7 @@ async def start_round(message: Message, state: FSMContext):
     while True:
 
         if not get_player_by_id(get_player_id_by(message=message)):
+            logging.warning(f"Игрок {player_id} вышел во время раунда")
             await message.answer(
                 text='Вы принудительно завершили игру'
             )
@@ -830,6 +1025,7 @@ async def start_round(message: Message, state: FSMContext):
 
         if room.times_up() or not room.characters:
             if not room.characters:
+                logging.info(f"В комнате {room.id_number} закончились персонажи. Рестарт.")
                 room.reset_characters()
                 last_message = None
             await end_round(
@@ -844,87 +1040,122 @@ async def start_round(message: Message, state: FSMContext):
             player.current_character = character
             last_message = await message.answer(
                 reply_markup=kb.character_inline,
-                text=f'Объясните персонажа {character}'
+                text=f'{Messages.EXPLAIN_CHARACTER}{character}'
             )
+            logging.info(f"Игроку {player.name} выдан персонаж: {character}")
 
         await asyncio.sleep(0.1)
 
 
-@router.callback_query(F.data == 'next_character')
+@router.callback_query(F.data == CallbackData.NEXT_CHARACTER_DATA)
 async def next_character(callback: CallbackQuery, state: FSMContext):
+    """
+    Обрабатывает кнопку перехода к следующему персонажу:
+    - Проверяет игрока, комнату, порядок хода.
+    - Переключает персонажа в комнате, если все условия выполнены.
+    - Обрабатывает ошибку двойного нажатия.
+    """
     try:
         await callback.answer('')
         player_id = get_player_id_by(callback=callback)
-        player: Player = get_player_by_id(player_id=player_id)
-        room: Room = get_room_by(room_id=player.room_id) if player else None
+        player: Player = get_player_by_id(player_id) if player_id else None
+        room: Room = get_room_by(player.room_id) if player else None
 
         if not player:
             await callback.message.answer(
-                text=Player.Messages.PLAYER_NOT_REGISTERED,
+                text=Messages.PLAYER_NOT_REGISTERED,
                 reply_markup=kb.start_keyboard
             )
             return
 
         if not room:
-            await callback.message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+            await callback.message.answer(
+                text=Messages.ROOM_NOT_ENTERED
+            )
             await state.set_state(Reg.room_id)
             return
 
         if not room.check_players_order(player):
+            logging.info(f"Игрок {player.name} попытался действовать вне своей очереди")
             await callback.message.answer(
-                text=player.Messages.WAIT_FOR_YOUR_TURN
+                text=Messages.WAIT_FOR_YOUR_TURN
             )
-            return None
+            return
 
         if not player.is_playing:
+            logging.info(f"Игрок {player.name} не в активной фазе хода")
             await callback.message.answer(
-                text=player.Messages.START_ROUND,
+                text=Messages.START_ROUND,
                 reply_markup=kb.start_round_keyboard
             )
+            return
 
         await callback.message.edit_text(
-            text='Угаданный персонаж',
+            text=Messages.GUESSED_CHARACTER,
             reply_markup=None
         )
 
         room.next_character()
+        logging.info(f"Игрок {player.name} завершил отгадку и запрошен следующий персонаж")
 
     except TelegramBadRequest:
-        logger.error('double_tap')
+        logging.error("Обнаружено двойное нажатие на кнопку")
 
 
-@router.message(Command('exit'))
+@router.message(Command(Commands.EXIT_COMMAND))
 async def exit(message: Message):
+    """
+    Обрабатывает команду /exit:
+    - Удаляет игрока из текущей сессии (если он зарегистрирован).
+    - Логгирует выход игрока.
+    """
+    logging.info(f"Игрок с ID {message.from_user.id} вышел из игры по команде /exit")
+
     await remove_player_by(message=message)
 
 
 @router.callback_query(F.data.startswith('position_'))
 async def choose_guesser(callback: CallbackQuery, state: FSMContext):
+    """
+    Обрабатывает выбор позиции игроком:
+    - Проверяет, что игрок и комната существуют.
+    - Проверяет, не занята ли выбранная позиция.
+    - Назначает игроку позицию и обновляет интерфейс.
+    """
     position = int(callback.data.split('_')[-1])
     player_id = get_player_id_by(callback=callback)
-    player: Player = get_player_by_id(player_id=player_id)
-    room: Room = get_room_by(room_id=player.room_id) if player else None
+    player: Player = get_player_by_id(player_id) if player_id else None
+    room: Room = get_room_by(player.room_id) if player else None
 
     if not player:
         await callback.message.answer(
-            text=Player.Messages.PLAYER_NOT_REGISTERED,
+            text=Messages.PLAYER_NOT_REGISTERED,
             reply_markup=kb.start_keyboard
         )
         return
 
     if not room:
-        await callback.message.answer(text=Player.Messages.ROOM_NOT_ENTERED)
+        await callback.message.answer(
+            text=Messages.ROOM_NOT_ENTERED
+        )
         await state.set_state(Reg.room_id)
         return
 
     if player.has_order:
-        await callback.answer('Вы уже имеете номер в очереди', show_alert=True)
-        return None
+        await callback.answer(
+            Messages.YOU_ALREADY_HAVE_POSITION,
+            show_alert=True
+        )
+        logging.info(f"Игрок {player.name} уже имеет позицию")
+        return
 
-    async with room.ROOM_LOCKS[room.id_number]:  # Захватываем блокировку
+    async with room.ROOM_LOCKS[room.id_number]:
         if position not in room.availible_positions:
-            logger.info('Выбрана недоступная позиция')
-            await callback.answer('Эта позиция уже выбрана', show_alert=True)
+            logging.warning(f"Позиция {position} недоступна для игрока {player.name}")
+            await callback.answer(
+                Messages.POSITION_ALREADY_CHOSEN,
+                show_alert=True
+            )
             await callback.message.edit_reply_markup(
                 reply_markup=await kb.positions_inline(room.availible_positions)
             )
@@ -934,6 +1165,7 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
         room.availible_positions.remove(position)
         room.set_players_position(player)
         message = f'\n{player.name} на позиции {position}'
+        logging.info(f"Игрок {player.name} выбрал позицию {position}")
 
     await callback.message.answer(
         text=f'Ваш номер в очереди {position}'
@@ -944,9 +1176,10 @@ async def choose_guesser(callback: CallbackQuery, state: FSMContext):
         room.gamemaster,
         text=message,
     )
+    logging.info(f"Гейммастеру отправлено сообщение о позиции игрока {player.name}")
 
 
-@router.message(Command('show_stats'))
+@router.message(Command(Commands.SHOW_STATS_COMMAND))
 async def show_stats(message: Message):
 
     if not is_admin(message):
@@ -962,36 +1195,20 @@ async def show_stats(message: Message):
     )
 
 
-@router.message(Command('info'))
+@router.message(Command(Commands.INFO_COMMAND))
 async def info(message: Message):
-    rules = (
-        'Добро пожаловать в игру "Шляпа"! Правила очень просты:\n\n'
-        '1) Ведущий создаёт комнату, вводит имя и число персонажей на игрока. '
-        'Остальные нажимают "Войти в комнату" и вводят имя.\n\n'
-        '2) Ведущий сообщает номер комнаты. Когда все подключатся, он закрывает её. '
-        'Добавлять новых игроков в закрытую комнату нельзя.\n\n'
-        '3) Игроки вводят своих персонажей. Когда последний игрок введёт последнего, '
-        'ведущий получит уведомление и сможет перемешать персонажей.\n\n'
-        '4) Игроки выбирают позиции. Когда все готовы, ведущий нажимает на кнопку "Игроки готовы". '
-        'После этого игроки узнают, кому они объясняют персонажей.\n'
-        'Если ведущий объявил готовность раньше, чем все выбрали позицию, '
-        'игроки без позиции дисквалифицируются.\n\n'
-        '5) Первый игрок начинает ход. На объяснение даётся 60 секунд. Пропуски запрещены. '
-        'Однокоренные слова использовать нельзя. Если не получается объяснить персонажа, ждите конца хода. '
-        'Можно подсказывать словами, похожими по звучанию. За каждого угаданного '
-        'персонажа объясняющий и угадывающий получают по 1 баллу.\n\n'
-        '6) Игра состоит из 3 раундов, каждый заканчивается, когда угаданы все персонажи:\n'
-        '   - В 1-м раунде персонажи объясняются словами без использованния однокоренных к загаданному персонажу\n'
-        '   - Во 2-м раунде персонажей показывают пантомимой.\n'
-        '   - В 3-м можно использовать только одно слово. Накопленные ассоциации должны помочь!'
-    )
+    """
+    Обработчик запроса правил
+
+    Отправляет правила игры любому желающему с ними ознакомиться
+    """
 
     await message.answer(
-        text=rules
+        text=Messages.RULES
     )
 
 
-@router.message(Command('shutdown'))
+@router.message(Command(Commands.SHUTDOWN_COMMAND))
 async def shutdown_handler(message: Message):
     """Выключает бота по команде /shutdown"""
 

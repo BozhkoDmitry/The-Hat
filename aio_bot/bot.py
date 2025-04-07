@@ -1,7 +1,8 @@
 import os
-from aiogram import Bot
-from dotenv import load_dotenv
 
+from aiogram import Bot
+from aiogram.types import BotCommand
+from dotenv import load_dotenv
 
 load_dotenv()
 
@@ -16,14 +17,25 @@ async def send_message(chat_id, text, reply_markup=None):
     )
 
 
-async def on_shutdown(bot: Bot) -> None:
+async def set_bot_commands(bot: Bot):
+    """Устанавливаем команды бота при запуске"""
+    commands = [
+        BotCommand(command="start", description="Начать новую игру"),
+        BotCommand(command="exit", description="Покинуть игру"),
+        BotCommand(command="info", description="Посмотреть правила"),
+    ]
+    await bot.set_my_commands(commands)
+
+
+async def on_startup(bot: Bot, base_url, path):
+    """Вызывается при включении бота"""
+
+    await bot.set_webhook(f"{base_url}{path}")
+    await set_bot_commands(bot)
+
+
+async def on_shutdown(bot: Bot):
     """Вызывается при выключении бота"""
-    print("🛑 Бот завершает работу...")
 
-    # Удаляем вебхук
     await bot.delete_webhook(drop_pending_updates=True)
-    print("✅ Вебхук удален!")
-
-    # Закрываем сессию
     await bot.session.close()
-    print("✅ Сессия закрыта!")

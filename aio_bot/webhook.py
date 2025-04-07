@@ -1,13 +1,14 @@
 import asyncio
 
-from bot import bot, on_shutdown
+from bot import bot, on_shutdown, on_startup
 from aio_handlers import router
-from aiogram import Dispatcher, Bot
-from aiogram.types import BotCommand
+from aiogram import Dispatcher
 from aiogram.webhook.aiohttp_server import (
     SimpleRequestHandler, setup_application
 )
+from functools import partial
 from aiohttp import web
+import logging
 
 # Webserver settings
 # bind localhost only to prevent any external access
@@ -23,27 +24,11 @@ WEBHOOK_PATH = "/aio_bot/"
 BASE_WEBHOOK_URL = "https://thehat.alwaysdata.net/"
 
 
-async def set_bot_commands(bot: Bot):
-    """Устанавливаем команды бота при запуске"""
-    commands = [
-        BotCommand(command="start", description="Начать новую игру"),
-        BotCommand(command="exit", description="Покинуть игру"),
-        BotCommand(command="info", description="Посмотреть правила"),
-    ]
-    await bot.set_my_commands(commands)
-
-
-async def on_startup(bot: Bot) -> None:
-
-    await bot.set_webhook(f"{BASE_WEBHOOK_URL}{WEBHOOK_PATH}")
-    await set_bot_commands(bot)
-
-
 async def main() -> None:
     dp = Dispatcher()
     dp.include_router(router)
 
-    dp.startup.register(on_startup)
+    dp.startup.register(partial(on_startup, base_url=BASE_WEBHOOK_URL, path=WEBHOOK_PATH))
     dp.shutdown.register(on_shutdown)
 
     app = web.Application()
@@ -56,13 +41,11 @@ async def main() -> None:
     site = web.TCPSite(runner, host=WEB_SERVER_HOST, port=WEB_SERVER_PORT)
     await site.start()
 
-    print(f"Webhook сервер запущен: {BASE_WEBHOOK_URL}{WEBHOOK_PATH}")
-
     try:
         while True:
             await asyncio.sleep(3600)
     except KeyboardInterrupt:
-        print("Бот выключается...")
+        logging.info('Бот остановлен')
 
 if __name__ == "__main__":
     asyncio.run(main())
