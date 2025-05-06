@@ -8,7 +8,7 @@ load_dotenv()
 
 TOKEN = os.getenv('TOKEN')
 
-bot = Bot(token=TOKEN)
+bot = Bot(token=TOKEN, parse_mode="HTML")
 
 
 async def send_message(chat_id, text, reply_markup=None):

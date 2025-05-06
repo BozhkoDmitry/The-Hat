@@ -10,7 +10,7 @@ ONE_TIME = False
 
 start_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text=Commands.START_COMMAND)],
+        [KeyboardButton(text='/' + Commands.START_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,
@@ -60,7 +60,7 @@ start_round_keyboard = ReplyKeyboardMarkup(
 
 exit_keyboard = ReplyKeyboardMarkup(
     keyboard=[
-        [KeyboardButton(text=Commands.EXIT_COMMAND)],
+        [KeyboardButton(text='/' + Commands.EXIT_COMMAND)],
     ],
     resize_keyboard=RESIZE,
     one_time_keyboard=ONE_TIME,

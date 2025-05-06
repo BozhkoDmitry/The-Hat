@@ -5,12 +5,12 @@ import aio_keybords as kb
 from aio_states import Reg
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
-from aiogram.filters import Command, CommandStart
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
 from bot import bot, on_shutdown, send_message
 from game_classes import Player, Room
-from texts import Messages, Commands, CallbackData, Flags
+from texts import CallbackData, Commands, Flags, Messages
 
 router = Router()
 
@@ -237,73 +237,77 @@ async def end_round(
     - Проверяет, завершилась ли игра, и, если да, вызывает завершение.
     - Передаёт ход следующему игроку.
     """
-    guesser: Player = room.get_next_player(player)
+    try:
+        guesser: Player = room.get_next_player(player)
 
-    if times_up:
-        times_up_message = f'{Messages.TIMES_UP}{player.round_score}'
+        if times_up:
+            times_up_message = f'{Messages.TIMES_UP}{player.round_score}'
 
-        if last_message:
-            await bot.edit_message_text(
-                chat_id=last_message.chat.id,
-                message_id=last_message.message_id,
-                text=Messages.UNGUESSED_CHARACTER,
-                reply_markup=None
-            )
-            logging.info(f"Сообщение с неотгаданным персонажем обновлено в чате {last_message.chat.id}")
+            if last_message:
+                await bot.edit_message_text(
+                    chat_id=last_message.chat.id,
+                    message_id=last_message.message_id,
+                    text=Messages.UNGUESSED_CHARACTER,
+                    reply_markup=None
+                )
+                logging.info(f"Сообщение с неотгаданным персонажем обновлено в чате {last_message.chat.id}")
 
-        await send_message(
-            player.id_number,
-            text=times_up_message
-        )
-        logging.info(f"Игроку {player.id_number} отправлено сообщение о завершении по таймеру")
-
-        if player != guesser:
             await send_message(
-                guesser.id_number,
+                player.id_number,
                 text=times_up_message
             )
-            logging.info(f"Следующему игроку {guesser.id_number} также отправлено сообщение о завершении раунда")
+            logging.info(f"Игроку {player.name} отправлено сообщение о завершении по таймеру")
 
-    else:
-        sorted_players = sorted(
-            room.players, key=lambda player: player.score, reverse=True
-        )
-        logging.info(f"Формируется таблица результатов раунда {room.round} для комнаты {room.id_number}")
-
-        score_board = Messages.TABLE_HEAD + "\n\n".join(
-            f"🔹 {i+1} | {player.name} | {player.score}" for i, player in enumerate(sorted_players)
-        )
-
-        for person in room.players:
-            person: Player
-            await send_message(
-                person.id_number,
-                text=Messages.ALL_CHARACTERS_GUESSED
-            )
-            await send_message(
-                person.id_number,
-                text=(
-                    f'{Messages.FINISHED_ROUND_NUMBER} {room.round}\n\n'
-                    f'{score_board}'
+            if player != guesser:
+                await send_message(
+                    guesser.id_number,
+                    text=times_up_message
                 )
+                logging.info(f"Следующему игроку {guesser.name} также отправлено сообщение о завершении раунда")
+
+        else:
+            sorted_players = sorted(
+                room.players, key=lambda player: player.score, reverse=True
+            )
+            logging.info(f"Формируется таблица результатов раунда {room.round} для комнаты {room.id_number}")
+
+            score_board = Messages.TABLE_HEAD + "\n\n".join(
+                f"🔹 {i+1} | {player.name} | {player.score}" for i, player in enumerate(sorted_players)
             )
 
-        room.next_round()
-        logging.info(f"Переход к следующему раунду — теперь раунд {room.round}")
-        if room.last_round():
-            logging.info(f"Игра в комнате {room.id_number} завершена")
-            await game_over(room)
-            return
+            for person in room.players:
+                person: Player
+                await send_message(
+                    person.id_number,
+                    text=Messages.ALL_CHARACTERS_GUESSED
+                )
+                await send_message(
+                    person.id_number,
+                    text=(
+                        f'{Messages.FINISHED_ROUND_NUMBER} {room.round}\n\n'
+                        f'{score_board}'
+                    )
+                )
 
-    await send_message(
-        guesser.id_number,
-        reply_markup=kb.start_round_keyboard,
-        text=Messages.YOUR_MOVE
-    )
-    logging.info(f"Игроку {guesser.id_number} передан ход")
+            room.next_round()
+            logging.info(f"Переход к следующему раунду — теперь раунд {room.round}")
+            if room.last_round():
+                logging.info(f"Игра в комнате {room.id_number} завершена")
+                await game_over(room)
+                return
 
-    room.end_round()
-    logging.info(f"Раунд завершён в комнате {room.id_number}")
+        await send_message(
+            guesser.id_number,
+            reply_markup=kb.start_round_keyboard,
+            text=Messages.YOUR_MOVE
+        )
+        logging.info(f"Игроку {guesser.name} передан ход")
+
+        room.end_round()
+        logging.info(f"Раунд завершён в комнате {room.id_number}")
+
+    except Exception as e:
+        logging.exception(e)
 
 
 async def game_over(room: Room):
@@ -335,7 +339,20 @@ async def game_over(room: Room):
         room.TAKEN_ROOM_NUMBERS.remove(room.id_number)
 
 
-@router.message(CommandStart())
+@router.message(StateFilter(Reg.name, Reg.room_id, Reg.number_of_characters, Reg.character), Command(Commands.START_COMMAND))
+async def block_start(message: Message, state: FSMContext):
+
+    current_state = await state.get_state()
+
+    if current_state == Reg.room_id or current_state == Reg.number_of_characters:
+        await message.answer(Flags.MESSAGE_NOT_INTEGER)
+    elif current_state == Reg.name:
+        await message.answer(Messages.CANT_REGISTER_COMMAND_AS_NAME)
+    elif current_state == Reg.character:
+        await message.answer(Messages.CANT_REGISTER_COMMAND_AS_CHARACTER)
+
+
+@router.message(Command(Commands.START_COMMAND))
 async def start(message: Message):
     """
     Обработчик команды /start.
@@ -464,7 +481,7 @@ async def add_name(message: Message, state: FSMContext):
         logging.info(f"Пользователь {message.from_user.id} отправил пустое сообщение")
         return
 
-    if message.text == Commands.EXIT_COMMAND:
+    if message.text == '/' + Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
         logging.info(f"Пользователь {message.from_user.id} покинул игру командой выхода")
         return
@@ -473,6 +490,7 @@ async def add_name(message: Message, state: FSMContext):
         await message.answer(
             text=Messages.CANT_REGISTER_COMMAND_AS_NAME
         )
+        await state.set_state(Reg.name)
         logging.warning(f"Пользователь {message.from_user.id} попытался использовать команду вместо имени: {message.text}")
         return
 
@@ -511,7 +529,7 @@ async def add_room_id(message: Message, state: FSMContext):
     player: Player = get_player_by_id(player_id) if player_id else None
     result = player.check_room_id(message) if player else None
 
-    if message.text == Commands.EXIT_COMMAND:
+    if message.text == '/' + Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
         logging.info(f"Пользователь {message.from_user.id} покинул игру командой выхода")
         return
@@ -575,7 +593,7 @@ async def add_number_of_charaters(message: Message, state: FSMContext):
     room: Room = get_room_by(player.room_id) if player else None
     result = player.check_number_of_characters(message)
 
-    if message.text == Commands.EXIT_COMMAND:
+    if message.text == '/' + Commands.EXIT_COMMAND:
         await remove_player_by(message=message)
         logging.info(f"Ведущий {message.from_user.id} вышел из игры")
         return
@@ -732,16 +750,17 @@ async def add_character(message: Message, state: FSMContext):
         await state.set_state(Reg.character)
         return
 
-    if message.text == Commands.EXIT_COMMAND:
+    if message.text == '/' + Commands.EXIT_COMMAND:
         logging.info('Игрок вышел во время ввода персонажей')
         await remove_player_by(message=message)
         return
 
     if message.text.startswith('/'):
-        logging.info('Игрок пытается зарегистрировать кмманду для бота в качестве персонажа')
+        logging.info('Игрок пытается зарегистрировать команду для бота в качестве персонажа')
         await message.answer(
             text=Messages.CANT_REGISTER_COMMAND_AS_CHARACTER
         )
+        await state.set_state(Reg.character)
         return
 
     if message.text == Commands.JOIN_CHARACTERS_COMMAND:

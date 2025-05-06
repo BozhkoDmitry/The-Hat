@@ -1,3 +1,6 @@
+from aiogram.utils.markdown import hbold
+
+
 class Flags:
     OK = (
         'ok'
@@ -38,7 +41,7 @@ class CallbackData:
 
 class Commands:
     START_COMMAND = (
-        '/start'
+        'start'
     )
     EXIT_COMMAND = (
         'exit'
@@ -87,10 +90,10 @@ class Messages:
         'Вы уже имеете номер в очереди'
     )
     GUESSED_CHARACTER = (
-        '✅ Угаданный персонаж!'
+        hbold('✅ Угаданный персонаж')
     )
     UNGUESSED_CHARACTER = (
-        '❌ Неугаданный персонаж'
+        hbold('❌ Неугаданный персонаж')
     )
     YOUR_MOVE_HAS_BEGUN = (
         '🎬 Ваш ход начался! Вперёд!'
@@ -131,10 +134,10 @@ class Messages:
         'Ваш напарник покинул игру в свой ход. Теперь ваша очередь ходить'
     )
     NEW_GAMEMASTER_MESSAGE_DURING_POSITION_CHOICE = (
-        f'Вы теперь ведущий. Когда все выберут позиции, нажмите кнопку {Commands.PLAYERS_ARE_READY_COMMAND}'
+        f'Вы теперь ведущий. Когда все выберут позиции, нажмите кнопку {hbold(Commands.PLAYERS_ARE_READY_COMMAND)}'
     )
     NEW_GAMEMASTER_MESSAGE_BEFORE_SHUFFLE = (
-        f'Вы теперь ведущий. После ввода своих персонажей нажмите кнопку {Commands.JOIN_CHARACTERS_COMMAND}'
+        f'Вы теперь ведущий. После ввода своих персонажей нажмите кнопку {hbold(Commands.JOIN_CHARACTERS_COMMAND)}'
     )
     NEW_GAMEMASTER_MESSAGE_IF_GAMEMASTER_IS_READY = (
         'Вы теперь ведущий. Дождитесь пока остальные игроки введут своих '
@@ -148,7 +151,7 @@ class Messages:
     )
     PLAYER_NOT_REGISTERED_YET = (
         'Вы ещё не зарегистрировались в игре.\n'
-        f'Чтобы зарегистрироваться, введите команду {Commands.START_COMMAND}'
+        f'Чтобы зарегистрироваться, введите команду /{Commands.START_COMMAND}'
 
     )
     RULES = (
@@ -179,7 +182,7 @@ class Messages:
     )
     YOU_DONT_HAVE_POSITION_GAME_OVER = (
         'Вы не успели выбрать позицию до начала игры и были дисквалифицированны.'
-        f'Вы можете начать новую игру, выполнив команду {Commands.START_COMMAND}'
+        f'Вы можете начать новую игру, выполнив команду /{Commands.START_COMMAND}'
     )
     CANT_START_GAME_WITHOUT_POSITIONED_PLAYERS = (
         'Нельзя начинать игру пока ни один из '
@@ -187,7 +190,7 @@ class Messages:
     )
     WHEN_ALL_POSITIONS_ARE_CHOSEN = (
         'Когда все игроки выберут номер в очереди, '
-        f'нажмите кнопку\n\n{Commands.PLAYERS_ARE_READY_COMMAND}\n\nИгроки не выбравшие '
+        f'нажмите кнопку {hbold(Commands.PLAYERS_ARE_READY_COMMAND)} Игроки не выбравшие '
         'номер в очереди будут дисквалифицированны'
     )
     NOT_ALL_PLAYERS_ENTERED_CHARACTERS = (
@@ -210,12 +213,12 @@ class Messages:
         'Пожалуйтса запишите своё имя текстом'
     )
     CANT_REGISTER_COMMAND_AS_CHARACTER = (
-        'Нельзя записать команду для бота в качестве персонажа'
-        f'На этом этапе бот распознаёт только команду\n{Commands.EXIT_COMMAND}'
+        'Нельзя записать команду для бота в качестве персонажа. '
+        f'На этом этапе бот распознаёт только команду /{Commands.EXIT_COMMAND}'
     )
     CANT_REGISTER_COMMAND_AS_NAME = (
-        'Нельзя записать команду для бота в качестве имени'
-        f'На этом этапе бот распознаёт только команду\n{Commands.EXIT_COMMAND}'
+        'Нельзя записать команду для бота в качестве имени. '
+        f'На этом этапе бот распознаёт только команду /{Commands.EXIT_COMMAND}'
     )
     GAME_STARTED = (
         'Вы вошли в игру'
@@ -228,7 +231,7 @@ class Messages:
     )
     EXIT_PREVIOUS_GAME = (
         'Вы не можете начать новую игру, пока не закончите прошлую. '
-        f'Чтобы закончить прошлую игру, выполните команду\n{Commands.EXIT_COMMAND}'
+        f'Чтобы закончить прошлую игру, выполните команду /{Commands.EXIT_COMMAND}'
     )
     ENTER_YOUR_NAME = (
         'Введите, пожалуйста, своё имя'
@@ -251,7 +254,7 @@ class Messages:
     )
     PLAYER_NOT_REGISTERED = (
         'Это действие недоступно, пока вы не начали игру. '
-        f'Чтобы начать игру, введите команду\n{Commands.START_COMMAND}'
+        f'Чтобы начать игру, введите команду /{Commands.START_COMMAND}'
     )
     CLOSE_ROOM = (
         'Вы установили количество загадываемых персонажей. Когда получите '
@@ -283,7 +286,7 @@ class Messages:
         'Сначала закончите свой ход'
     )
     GAME_EXITED = (
-        f'Вы покинули игру. Если хотите начать новую, можете ввести команду\n{Commands.START_COMMAND}'
+        f'Вы покинули игру. Если хотите начать новую, можете ввести команду /{Commands.START_COMMAND}'
     )
     GAME_OVER = (
         'Поздравляем! Вы прошли игру!'
@@ -297,5 +300,5 @@ class Messages:
         'Выберете номер в очереди:'
     )
     ADD_CHARACTERS = (
-        f'Чтобы начать добавлять персонажей, нажмите на кнопку\n{Commands.ADD_CHARACTERS_COMMAND}'
+        f'Чтобы начать добавлять персонажей, нажмите на кнопку {hbold(Commands.ADD_CHARACTERS_COMMAND)}'
     )
