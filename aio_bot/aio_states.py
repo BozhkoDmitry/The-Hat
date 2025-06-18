@@ -8,3 +8,8 @@ class Reg(StatesGroup):
     character = State()
     position = State()
     round_duration = State()
+
+
+class Conf(StatesGroup):
+    character = State()
+    players = State()

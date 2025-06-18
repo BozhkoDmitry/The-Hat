@@ -101,6 +101,36 @@ new_keyboard_inline = InlineKeyboardMarkup(
     ]
 )
 
+confirm_extra_players_kick = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [
+            InlineKeyboardButton(
+                text='Выгнать игроков без позиции', callback_data='kick'
+            )
+        ],
+        [
+            InlineKeyboardButton(
+                text='Подождать', callback_data='wait'
+            )
+        ]
+    ]
+)
+
+
+async def confirm_character(character):
+    keyboard = InlineKeyboardBuilder()
+    keyboard.add(
+        InlineKeyboardButton(
+            text='Изменить',
+            callback_data=f'character_change_{character}'
+        ),
+        InlineKeyboardButton(
+            text='Добавить',
+            callback_data=f'character_confirm_{character}'
+        )
+    )
+    return keyboard.adjust(3).as_markup()
+
 
 async def positions_inline(availible_positions):
     keyboard = InlineKeyboardBuilder()

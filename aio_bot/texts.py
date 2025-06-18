@@ -1,6 +1,10 @@
 from aiogram.utils.markdown import hbold
 
 
+def bold_underlined(text):
+    return f'<b><i><u>{text}</u></i></b>'
+
+
 class Flags:
     OK = (
         'ok'
@@ -81,7 +85,7 @@ class Messages:
         'Объясните персонажа '
     )
     TABLE_HEAD = (
-        '🏆 Место | 👤 Игрок | 🎯 Баллы\n\n'
+        hbold('🏆 Место | 👤 Игрок | 🎯 Баллы\n\n')
     )
     POSITION_ALREADY_CHOSEN = (
         'Эта позиция уже выбрана'
@@ -190,7 +194,7 @@ class Messages:
     )
     WHEN_ALL_POSITIONS_ARE_CHOSEN = (
         'Когда все игроки выберут номер в очереди, '
-        f'нажмите кнопку {hbold(Commands.PLAYERS_ARE_READY_COMMAND)} Игроки не выбравшие '
+        f'нажмите кнопку {bold_underlined(Commands.PLAYERS_ARE_READY_COMMAND)}\n\nИгроки не выбравшие '
         'номер в очереди будут дисквалифицированны'
     )
     NOT_ALL_PLAYERS_ENTERED_CHARACTERS = (
@@ -300,5 +304,5 @@ class Messages:
         'Выберете номер в очереди:'
     )
     ADD_CHARACTERS = (
-        f'Чтобы начать добавлять персонажей, нажмите на кнопку {hbold(Commands.ADD_CHARACTERS_COMMAND)}'
+        f'Чтобы начать добавлять персонажей, нажмите на кнопку {bold_underlined(Commands.ADD_CHARACTERS_COMMAND)}'
     )

@@ -72,6 +72,7 @@ class Room:
     ROOM_LOCKS = {}
 
     def __init__(self, gamemaster_id):
+        self.created_at = time()
         self.players = []
         self.unready_players = []
         self.__id_number = self.set_room_id()
