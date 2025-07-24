@@ -1,16 +1,16 @@
 import asyncio
 import logging
 
-import aio_keybords as kb
-from aio_states import Conf, Reg
+from . import aio_keybords as kb
+from .aio_states import Conf, Reg
 from aiogram import F, Router
 from aiogram.exceptions import TelegramBadRequest
 from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, Message, ReplyKeyboardRemove
-from bot import bot, on_shutdown, send_message
-from game_classes import Player, Room
-from texts import CallbackData, Commands, Flags, Messages
+from .bot import bot, on_shutdown, send_message
+from .game_classes import Player, Room
+from .texts import CallbackData, Commands, Flags, Messages
 
 router = Router()
 
@@ -1302,7 +1302,7 @@ async def show_stats(message: Message):
             f'Игроки:\n{[player.name for id_nuber, player in Player.PLAYERS.items()]}'
             f'\nКомнаты:\n{[room.id_number for id_number, room in Room.ROOMS.items()]}'
             f'\nЗанятые номера:\n{[number for number in Room.TAKEN_ROOM_NUMBERS]}'
-            f'\nLocks:\n{[lock for lock in Room.ROOM_LOCKS ]}'
+            f'\nLocks:\n{[lock for lock in Room.ROOM_LOCKS]}'
         )
     )
 

@@ -3,7 +3,7 @@ from aiogram.types import (
     KeyboardButton, ReplyKeyboardMarkup
 )
 from aiogram.utils.keyboard import InlineKeyboardBuilder
-from texts import Commands, CallbackData
+from .texts import Commands, CallbackData
 
 RESIZE = True
 ONE_TIME = False

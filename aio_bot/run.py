@@ -1,9 +1,9 @@
 import asyncio
 
-from aio_handlers import router, game_over
+from .aio_handlers import router, game_over
 from aiogram import Dispatcher
-from bot import bot, set_bot_commands
-from game_classes import Room
+from .bot import bot, set_bot_commands
+from .game_classes import Room
 from time import time
 import logging
 

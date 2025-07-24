@@ -2,7 +2,7 @@ from random import choice, randint
 from time import time
 
 from aiogram.types import Message
-from texts import Flags
+from .texts import Flags
 
 
 class Player:
