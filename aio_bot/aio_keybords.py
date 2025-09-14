@@ -117,16 +117,16 @@ confirm_extra_players_kick = InlineKeyboardMarkup(
 )
 
 
-async def confirm_character(character):
+async def confirm_character():
     keyboard = InlineKeyboardBuilder()
     keyboard.add(
         InlineKeyboardButton(
             text='Изменить',
-            callback_data=f'character_change_{character}'
+            callback_data='character_change'
         ),
         InlineKeyboardButton(
             text='Добавить',
-            callback_data=f'character_confirm_{character}'
+            callback_data='character_confirm'
         )
     )
     return keyboard.adjust(3).as_markup()

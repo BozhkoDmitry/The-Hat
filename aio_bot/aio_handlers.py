@@ -773,9 +773,11 @@ async def add_character(message: Message, state: FSMContext):
     character = message.text
     await message.answer(
         text=f'Убедитесь, что персонаж записан правильно:\n\n<i><b>{character}</b></i>',
-        reply_markup=await kb.confirm_character(character)
+        reply_markup=await kb.confirm_character()
     )
     await state.set_state(Conf.character)
+    await state.update_data(character=character)
+    logging.info(f'Игрок {message.from_user.id} ввёл персонажа: {character}')
 
 
 @router.callback_query(F.data.startswith('character_'), Conf.character)
@@ -783,15 +785,19 @@ async def confirm_character(callback: CallbackQuery, state: FSMContext):
     """
     Функция для подтверждения правильности введённого персонажа
     """
-    await state.clear()
     await callback.answer()
     player_id = get_player_id_by(callback=callback)
     player: Player = get_player_by_id(player_id) if player_id else None
     room: Room = get_room_by(player.room_id) if player else None
 
-    character = callback.data.split('_')[-1]
-    option = callback.data.split('_')[1]
+    data = await state.get_data()
+    character = data.get('character')
+    logging.info(f'Игрок {player_id} подтверждает персонажа {character}')
+    option = callback.data.split('_')[-1]
     logging.info(f'персонаж:{character}, дейстивие {option}')
+
+    await state.clear()
+    logging.info(f'{await state.get_data()}')
 
     if option == 'change':
         await callback.message.edit_text(
@@ -1302,7 +1308,7 @@ async def show_stats(message: Message):
             f'Игроки:\n{[player.name for id_nuber, player in Player.PLAYERS.items()]}'
             f'\nКомнаты:\n{[room.id_number for id_number, room in Room.ROOMS.items()]}'
             f'\nЗанятые номера:\n{[number for number in Room.TAKEN_ROOM_NUMBERS]}'
-            f'\nLocks:\n{[lock for lock in Room.ROOM_LOCKS ]}'
+            f'\nLocks:\n{[lock for lock in Room.ROOM_LOCKS]}'
         )
     )
 
